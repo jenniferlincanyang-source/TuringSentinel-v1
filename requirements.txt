@@ -1,0 +1,13 @@
+# 图灵哨兵 · RiskCopilot —— demo 后端运行依赖
+# 安装：python3 -m pip install -r requirements.txt
+#
+# 版本为本机 2026-08-15 实测通过的版本（Python 3.9.6 / macOS）。
+# 都是宽松开源协议，详见 DEPENDENCIES.md 的完整披露表。
+
+fastapi==0.128.7      # MIT      —— 后端 Web 框架
+uvicorn==0.39.0       # BSD-3    —— ASGI 服务器
+akshare==1.18.23      # MIT      —— 公开财经数据（东财年报 / 巨潮公告标题）
+pandas==2.3.3         # BSD-3    —— akshare 返回值处理
+
+# 仅"自动录屏"用（评委复现 demo 不需要）：
+# playwright==1.*     # Apache-2.0 —— demo/record_demo.py 浏览器自动化

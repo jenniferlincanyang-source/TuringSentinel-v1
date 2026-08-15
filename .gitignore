@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.DS_Store
+._*
+
+# 运行时写盘的用户数据，不进仓库
+demo/data/decision_log.json
+
+# FiGraph 衍生数据：条款为"仅限参赛/研究用途、不得商用"，与本仓库 Apache-2.0
+# （允许商用）冲突，故不随仓库分发。详见 README「这个仓库不含什么」。
+demo/gnn_scores.json
+
+# 第三方资料与提交物：版权 / 体积原因不进仓库
+docs/papers/
+law/原文/
+提交物/
+案例库/
+*.mp4
+*.webm

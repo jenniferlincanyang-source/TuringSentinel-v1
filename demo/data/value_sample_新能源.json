@@ -1,0 +1,63 @@
+{
+  "_meta": {
+    "purpose": "价值发现引擎样例·新能源链",
+    "honesty_note": "⚠️ 结构示意数据（估值分位/涨幅/覆盖度/关系占比为示意值，非精确实盘），用于演示引擎逻辑。判据逻辑本身确定性可复现；真值待接 akshare 板块成分+行情+巨潮披露。",
+    "验算题说明": "某储能温控标的作为题材联想验算题：虽挂'新能源'概念，但主业为数据中心/工业温控，与动力电池链需求驱动不同，用于检验归属核验能否识别'跨题材外溢'。"
+  },
+  "chain": {
+    "name": "新能源（动力电池·储能）",
+    "leader_ret_1y": 0.70,
+    "leader_pe_pct": 0.68,
+    "leaders": ["宁德时代(300750)", "亿纬锂能(300014)", "阳光电源(300274)"]
+  },
+  "members": [
+    {
+      "code": "300750", "name": "宁德时代",
+      "role": "龙头（锚，不作候选）",
+      "pe_pct_in_chain": 0.72, "ret_1y": 0.75, "turnover": 0.04,
+      "analyst_coverage": 48, "rev_growth": 0.30, "profit_growth": 0.40,
+      "relations": {"own_main_biz": "动力电池/储能电池", "leader_demand": "电动车+储能装机", "shared_demand": "自身即龙头"}
+    },
+    {
+      "code": "997001", "name": "示意·电池结构件厂E",
+      "role": "候选（真实关联型·预期命中）",
+      "pe_pct_in_chain": 0.26, "ret_1y": 0.09, "turnover": 0.015,
+      "analyst_coverage": 5, "rev_growth": 0.35, "profit_growth": 0.28,
+      "relations": {
+        "own_main_biz": "动力电池精密结构件（壳体/盖板）",
+        "leader_demand": "动力电池+储能电池放量",
+        "shared_demand": "同吃电池放量：电池厂扩产→上游结构件需求同步放量",
+        "supply_links": [
+          {"leader": "宁德时代", "role": "supplier", "ratio": 0.20, "year": 2024, "source": "示意·龙头年报前五大供应商"},
+          {"leader": "亿纬锂能", "role": "supplier", "ratio": 0.09, "year": 2024, "source": "示意·龙头年报前五大供应商"}
+        ]
+      }
+    },
+    {
+      "code": "997002", "name": "示意·数据中心温控厂F",
+      "role": "验算题（题材联想型·预期被识破）",
+      "pe_pct_in_chain": 0.29, "ret_1y": 0.11, "turnover": 0.019,
+      "analyst_coverage": 8, "rev_growth": 0.18, "profit_growth": 0.15,
+      "relations": {
+        "own_main_biz": "数据中心/工业温控设备（下游主要为IDC、工业）",
+        "leader_demand": "动力电池+储能装机",
+        "shared_demand": "挂'新能源/储能温控'概念，但主业下游是数据中心，与动力电池链需求驱动不同",
+        "supply_links": []
+      }
+    },
+    {
+      "code": "997003", "name": "示意·传统电解液厂G",
+      "role": "干扰项（冷但基本面萎缩·预期被成长护栏压下）",
+      "pe_pct_in_chain": 0.16, "ret_1y": -0.12, "turnover": 0.01,
+      "analyst_coverage": 4, "rev_growth": -0.20, "profit_growth": -0.40,
+      "relations": {
+        "own_main_biz": "传统电解液（产能过剩、价格战）",
+        "leader_demand": "动力电池",
+        "shared_demand": "虽在电池链上，但产能过剩致量价齐跌",
+        "supply_links": [
+          {"leader": "宁德时代", "role": "supplier", "ratio": 0.06, "year": 2024, "source": "示意·龙头年报前五大供应商"}
+        ]
+      }
+    }
+  ]
+}

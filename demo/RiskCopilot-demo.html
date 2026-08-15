@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RiskCopilot · 财务舞弊风险研判 Demo</title>
+<style>
+:root{
+  --bg:#0a1024;--bg2:#0e1630;--card:#16214a;--line:#28386b;
+  --ink:#eaf0ff;--sub:#9fb2df;--dim:#6c7fb0;
+  --acc:#4da3ff;--acc2:#00e0c6;--warn:#ffcf5c;--red:#ff6b6b;--green:#4ee39a;--purple:#b98cff;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:linear-gradient(160deg,#05070f,#0a1024);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 22px 60px;}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 20px;border-bottom:1px solid var(--line);}
+.logo{font-size:24px;font-weight:700;background:linear-gradient(90deg,#4da3ff,#00e0c6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;}
+.logo small{display:block;font-size:12px;color:var(--sub);-webkit-text-fill-color:var(--sub);margin-top:2px;font-weight:400;}
+.tagbar{font-size:12px;color:var(--acc2);border:1px solid var(--acc2);padding:4px 12px;border-radius:20px;}
+.hdr-right{display:flex;align-items:center;gap:12px;}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);white-space:nowrap;}
+.dot{width:9px;height:9px;border-radius:50%;background:#666;box-shadow:0 0 0 0 rgba(0,224,198,.5);}
+.dot.on{background:#00e0c6;animation:pulse 2s infinite;}
+.dot.off{background:#ff5b5b;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,224,198,.5);}70%{box-shadow:0 0 0 6px rgba(0,224,198,0);}100%{box-shadow:0 0 0 0 rgba(0,224,198,0);}}
+.btn-stop{font-size:12px;color:var(--sub);border:1px solid var(--line);background:transparent;padding:4px 10px;border-radius:14px;cursor:pointer;transition:.15s;}
+.btn-stop:hover{color:#ff5b5b;border-color:#ff5b5b;}
+.btn-stop:disabled{opacity:.35;cursor:not-allowed;}
+h2{font-size:17px;margin:26px 0 12px;color:#fff;display:flex;align-items:center;gap:8px;}
+h2 .n{width:22px;height:22px;background:var(--acc);color:#05070f;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.panel{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:18px 20px;}
+/* 输入区 */
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.src{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.src .ic{font-size:20px;}
+.src .txt{flex:1;}
+.src .name{font-size:14px;color:#fff;}
+.src .desc{font-size:11px;color:var(--dim);margin-top:2px;}
+.pill{font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.pill.live{background:rgba(78,227,154,.14);color:var(--green);border:1px solid var(--green);}
+.pill.plan{background:rgba(255,207,92,.12);color:var(--warn);border:1px solid var(--warn);}
+.selrow{display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap;}
+select,button{font-family:inherit;font-size:14px;border-radius:8px;border:1px solid var(--line);}
+select{background:var(--card);color:#fff;padding:9px 12px;min-width:200px;}
+button.run{background:linear-gradient(90deg,#4da3ff,#00e0c6);color:#05070f;font-weight:700;
+  border:none;padding:10px 26px;cursor:pointer;font-size:15px;}
+button.run:hover{opacity:.9;}
+button.run:disabled{opacity:.5;cursor:not-allowed;}
+/* 流水线 */
+.pipe{display:flex;align-items:stretch;gap:6px;margin-top:6px;overflow-x:auto;}
+.stage{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:12px 10px;text-align:center;position:relative;opacity:.4;transition:.4s;}
+.stage.on{opacity:1;border-color:var(--acc);box-shadow:0 0 16px rgba(77,163,255,.3);}
+.stage.done{opacity:1;border-color:var(--green);}
+.stage .a{font-size:12px;color:var(--acc);font-weight:600;}
+.stage .r{font-size:11px;color:var(--sub);margin-top:6px;line-height:1.4;min-height:28px;}
+.stage .chk{position:absolute;top:6px;right:8px;color:var(--green);font-size:13px;opacity:0;}
+.stage.done .chk{opacity:1;}
+/* 结果 */
+#result{display:none;}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;}
+.card2{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+.card2 h3{font-size:15px;color:var(--acc);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{border:1px solid var(--line);padding:7px 9px;text-align:center;}
+th{background:#1b2a58;color:var(--acc);}
+td{color:var(--sub);}
+.red{color:var(--red);font-weight:700;}.warn{color:var(--warn);font-weight:700;}.green{color:var(--green);font-weight:700;}
+.hits{list-style:none;margin-top:8px;}
+.hits li{font-size:12px;color:var(--sub);padding:3px 0 3px 16px;position:relative;line-height:1.5;}
+.hits li::before{content:"✓";position:absolute;left:0;color:var(--green);}
+svg{width:100%;height:auto;display:block;}
+.legend{font-size:11px;color:var(--dim);margin-top:6px;text-align:center;}
+.verdict{background:linear-gradient(135deg,rgba(255,107,107,.12),rgba(255,207,92,.08));
+  border:1px solid var(--red);border-radius:12px;padding:16px 20px;margin-top:16px;}
+.verdict h3{color:var(--red);font-size:16px;margin-bottom:8px;}
+.verdict p{font-size:13px;color:var(--sub);line-height:1.7;}
+.law{font-size:13px;color:var(--sub);line-height:1.8;}
+.law b{color:#fff;}
+.mono{font-family:"SF Mono",Consolas,monospace;background:#0a1330;padding:2px 6px;border-radius:5px;font-size:12px;color:var(--acc2);}
+.compliance{margin-top:18px;font-size:12px;color:var(--dim);border-top:1px dashed var(--line);padding-top:14px;line-height:1.7;}
+.compliance b{color:var(--warn);}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--acc);
+  border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.fade{animation:fd .6s ease;}
+@keyframes fd{from{opacity:0;transform:translateY(10px);}to{opacity:1;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="logo" ondblclick="__resetRunning()" title="双击可复位卡住的状态">RiskCopilot<small>财务舞弊尽调与风险研判 · 多 Agent 副驾</small></div>
+  <div class="hdr-right">
+    <div class="status" id="svc-status" title="后端服务状态"><span class="dot" id="svc-dot"></span><span id="svc-text">检测中…</span></div>
+    <button class="btn-stop" id="svc-stop" onclick="stopBackend()" disabled>关闭后端</button>
+    <div class="tagbar">GOAI 赛道二 · AI+金融 · 图灵哨兵</div>
+  </div>
+</header>
+
+<!-- 输入区 -->
+<h2><span class="n">1</span> 数据接入 · 多源独立来源交叉核验</h2>
+<div class="panel">
+  <div class="inputs">
+    <div class="src"><span class="ic">📄</span><div class="txt"><div class="name">上市公司年报（含关联方专章）</div><div class="desc">资产负债表/利润表/现金流量表/附注·关联方及关联交易披露</div></div><span class="pill live">已接入·真实</span></div>
+    <div class="src"><span class="ic">⚖️</span><div class="txt"><div class="name">处罚书 / 判决书 / 法条库</div><div class="desc">证监会处罚·法院判决·证券法/刑法/司法解释</div></div><span class="pill live">已接入·真实</span></div>
+    <div class="src"><span class="ic">🕸️</span><div class="txt"><div class="name">FiGraph 关系图谱数据集</div><div class="desc">A股上市公司真实关系图（学术公开·GNN 输入）</div></div><span class="pill live">已接入·真实</span></div>
+    <div class="src"><span class="ic">🏛️</span><div class="txt"><div class="name">企业信用公示 / 裁判文书（官方免费）</div><div class="desc">工商股权·司法涉诉，国家公示系统抓取</div></div><span class="pill live">公开可取</span></div>
+    <div class="src"><span class="ic">🏦</span><div class="txt"><div class="name">银行流水 / 对账单</div><div class="desc">资金流核对（审计最硬信号）</div></div><span class="pill plan">架构预留</span></div>
+    <div class="src"><span class="ic">🔍</span><div class="txt"><div class="name">天眼查 / 企查查 API</div><div class="desc">关系图谱可选商用增强（非必需，底层数据公开可替代）</div></div><span class="pill plan">可选·如采购</span></div>
+  </div>
+  <div class="selrow">
+    <span style="font-size:13px;color:var(--sub)">经典案例（内置真实数据）：</span>
+    <select id="company">
+      <option value="kangmei">康美药业 600518（已定性 · 完整追责闭环）</option>
+    </select>
+    <button class="run" id="runBtn" onclick="run()">▶ 启动多 Agent 研判</button>
+  </div>
+  <div class="selrow" style="border-top:1px dashed var(--line);padding-top:14px;margin-top:14px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#a78bfa;width:100%;margin-bottom:6px">🗣️ 用一句话提任务（Agent 自动拆解 · 对齐手册 §8.2 任务闭环）：</span>
+    <input id="taskInput" placeholder="例：康美药业有没有财务造假风险？ / 600519和000651哪个更干净？"
+      style="background:var(--card);color:#fff;border:1px solid #7c5cff;border-radius:8px;padding:10px 14px;font-size:14px;flex:1;min-width:340px;font-family:inherit"
+      onkeydown="if(event.key==='Enter')runTask()">
+    <button class="run" id="taskBtn" onclick="runTask()" style="background:linear-gradient(135deg,#a78bfa,#7c5cff)">🎯 提交任务</button>
+    <button class="run" id="orchBtn" onclick="runOrchestrate()" style="background:linear-gradient(135deg,#00e0c6,#4a9eff)">🎛️ 总控编排</button>
+  </div>
+  <div class="selrow" style="padding-top:12px;margin-top:4px">
+    <span style="font-size:12px;color:var(--dim)">或直接按代码查：</span>
+    <input id="codeInput" placeholder="6位代码，如 600519" maxlength="6"
+      style="background:var(--card);color:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;width:150px;font-family:inherit">
+    <button class="run" id="liveBtn" onclick="runLive()">⚡ 快查</button>
+    <button class="run" id="deepBtn" onclick="runDeepdive()" style="background:linear-gradient(135deg,#7c5cff,#4a9eff)">🧠 深度研判</button>
+    <button class="run" id="debateBtn" onclick="runDebate()" style="background:linear-gradient(135deg,#ff6b6b,#ff9f43)">⚖️ 控辩互搏</button>
+    <span id="status" style="font-size:12px;color:var(--dim)"></span>
+  </div>
+  <div class="selrow" style="border-top:1px dashed var(--line);padding-top:14px;margin-top:14px;flex-wrap:wrap">
+    <span style="font-size:13px;color:#4ee39a;width:100%;margin-bottom:6px">💎 价值发现（反过来用同一套引擎：找被漏看的真价值、避开被粉饰的假价值）：</span>
+    <span style="font-size:12px;color:var(--dim)">产业链：</span>
+    <select id="chainSel" style="background:var(--card);color:#fff;border:1px solid #4ee39a;border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit">
+      <option value="光通信">光通信（AI算力·光模块）</option>
+      <option value="半导体">半导体（AI算力·先进制程/HBM）</option>
+      <option value="新能源">新能源（动力电池·储能）</option>
+    </select>
+    <button class="run" id="valueBtn" onclick="runValueScan()" style="background:linear-gradient(135deg,#4ee39a,#00e0c6)">💎 价值发现</button>
+    <span id="valueStatus" style="font-size:12px;color:var(--dim)"></span>
+  </div>
+  <div style="font-size:11px;color:var(--dim);margin-top:10px">
+    实时查询由本地后端调用 AkShare（东方财富公开数据）拉取真实年报，喂给信号库确定性引擎当场计算——换公司结果就变，非预设。
+    需先启动后端：<span class="mono">cd demo &amp;&amp; python3 backend.py</span>
+  </div>
+</div>
+
+<!-- 流水线 -->
+<h2><span class="n">2</span> 多 Agent 协同流水线</h2>
+<div class="panel">
+  <div class="pipe" id="pipe">
+    <div class="stage" data-i="0"><div class="a">A1 信号聚合</div><div class="r" id="r0"></div><span class="chk">✓</span></div>
+    <div class="stage" data-i="1"><div class="a">A2 图谱根因</div><div class="r" id="r1"></div><span class="chk">✓</span></div>
+    <div class="stage" data-i="2"><div class="a">A3 处置追责</div><div class="r" id="r2"></div><span class="chk">✓</span></div>
+    <div class="stage" data-i="3"><div class="a">A4 合规审计</div><div class="r" id="r3"></div><span class="chk">✓</span></div>
+    <div class="stage" data-i="4"><div class="a">A5 复盘沉淀</div><div class="r" id="r4"></div><span class="chk">✓</span></div>
+  </div>
+</div>
+
+<!-- 结果区 -->
+<div id="result">
+<h2><span class="n">3</span> 企业档案</h2>
+<div class="panel" id="profileCard" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+    <div><span id="pfName" style="font-size:20px;font-weight:700;color:#fff"></span>
+      <span id="pfCode" class="mono" style="margin-left:8px"></span></div>
+    <div id="pfTags"></div>
+  </div>
+  <div id="pfIntro" style="font-size:14px;color:var(--sub);line-height:1.7;margin:12px 0"></div>
+  <div id="pfGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px"></div>
+  <div id="pfScope" style="font-size:12px;color:var(--dim);margin-top:12px;line-height:1.6"></div>
+</div>
+
+<h2><span class="n">4</span> 风险研判报告</h2>
+<!-- 风险矩阵卡：多维证据一眼可读的总览（对标成熟尽调技能的16维矩阵，但每格判据可溯源）-->
+<div class="card2" id="matrixCard" style="display:none;margin-bottom:16px;border-color:#4a9eff">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <h3 style="margin:0">🧮 风险维度矩阵（多引擎汇总 · 一眼可读）</h3>
+    <div id="matrixSummary" style="font-size:12px;color:var(--sub)"></div>
+  </div>
+  <div style="font-size:11px;color:var(--dim);margin:8px 0 12px">每一维的判据分别来自确定性财务信号（年报可复现）、GNN 关系图谱、公开公告——<b style="color:var(--sub)">与成熟尽调工具的风险矩阵形态一致，但此处每格可溯源、可审计、非 LLM 归纳</b></div>
+  <div id="matrixGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+</div>
+<div class="rgrid">
+  <!-- 信号 -->
+  <div class="card2">
+    <h3>📊 财务信号研判（信号库 · 真实年报）</h3>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:10px">覆盖 7 类舞弊信号：货币资金真实性 · 收入质量 · 利润质量 · 存货真实性 · 其他应收款占用 · 商誉减值 · 应收账款激进（长在审计"四类矛盾武器"上，@register 可持续扩充）</div>
+    <table id="sigTable"></table>
+    <ul class="hits" id="sigHits"></ul>
+    <div style="font-size:11px;color:var(--dim);margin-top:8px"><span class="mono">python run.py</span> 可复现 · 无大模型参与</div>
+  </div>
+  <!-- GNN -->
+  <div class="card2">
+    <h3>🕸️ GNN 关系图结构异常</h3>
+    <div id="gnnBox"></div>
+    <div class="legend">红色高亮 = GNN 识别的异常资金/造假结构 · 灰色 = 正常关联</div>
+  </div>
+</div>
+<div class="rgrid">
+  <!-- 追责 -->
+  <div class="card2">
+    <h3>⚖️ 处置追责测算（法条库 · 官方原文坐实）</h3>
+    <div class="law" id="lawBox"></div>
+  </div>
+  <!-- 数据溯源 -->
+  <div class="card2">
+    <h3>🔍 数据溯源 · 交叉核验</h3>
+    <div class="law" id="srcBox"></div>
+  </div>
+</div>
+<!-- 深度研判（Agent 读材料 + LLM 推理）-->
+<div id="deepPanel" style="display:none">
+  <h2><span class="n">5</span> 🧠 深度研判（资料理解 + Agent 编排 + LLM 研判）</h2>
+  <div id="intentBanner" style="display:none;background:rgba(167,139,250,.1);border:1px solid #a78bfa;border-radius:10px;padding:12px 16px;margin-bottom:16px"></div>
+  <!-- Planner 自主规划（据局面而变的能力调用决策）-->
+  <div class="card2" style="margin-bottom:16px;border-color:#7c5cff">
+    <h3>🧭 Planner 自主规划（据局面决定调用哪些能力）</h3>
+    <div style="font-size:11px;color:var(--dim);margin-bottom:10px">对齐赛道二手册 §8.2.3 任务规划：不走写死流水线，按当前风险局面自主取舍——清白公司不启动追责（避免越权）</div>
+    <div id="planBox"></div>
+  </div>
+  <div class="rgrid">
+    <!-- Agent 推理轨迹 -->
+    <div class="card2">
+      <h3>🔄 Agent 执行轨迹（可解释）</h3>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px">意图理解→任务规划→能力调用→结果交付，每步可审计</div>
+      <div id="traceBox"></div>
+    </div>
+    <!-- 定性红旗 -->
+    <div class="card2">
+      <h3>🚩 定性红旗（公告/舆情 · 数字看不见的味道）</h3>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px" id="rfMeta"></div>
+      <div id="redflagBox" style="max-height:340px;overflow-y:auto"></div>
+    </div>
+  </div>
+  <div class="verdict" id="deepVerdict" style="border-color:#7c5cff"></div>
+  <div style="font-size:11px;color:var(--dim);margin-top:8px" id="deepEngine"></div>
+  <div class="card2" id="actionBox" style="display:none;margin-top:16px;border-color:#4ee39a"></div>
+</div>
+
+<!-- 总控编排 Agent（项目组长：按风险分级升级，统筹所有能力）-->
+<div id="orchPanel" style="display:none">
+  <h2><span class="n">🎛️</span> 总控编排 Agent（项目组长 · 按风险分级升级）</h2>
+  <div style="font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:14px;background:rgba(0,224,198,.06);border:1px solid rgba(0,224,198,.28);border-radius:10px;padding:12px 16px">
+    <b style="color:#00e0c6">一个 Agent 统筹所有能力</b>：像审计项目组长——拿到任务后自主决定每个标的<b>查到多深</b>：
+    先粗筛，有信号才升级<b style="color:#4a9eff">深度研判</b>，高风险才升级<b style="color:#ff6b6b">控辩互搏</b>，裁定成立才标记<b style="color:#ffcf5c">追责</b>。
+    <span style="color:var(--dim)">同一套代码，清白公司止步粗筛、高危公司一路升级——<b>不同输入走不同编排路径</b>，可解释、可审计（对齐手册 §8.2.3 任务规划）。</span>
+  </div>
+  <div id="orchSummary" style="margin-bottom:16px"></div>
+  <div id="orchTargets"></div>
+</div>
+
+<!-- 多 Agent 控辩互搏（复赛级差异化：三个立场对立的 Agent 就同一硬证据对抗收敛）-->
+<div id="debatePanel" style="display:none">
+  <h2><span class="n">6</span> ⚖️ 多 Agent 控辩互搏（对抗式研判）</h2>
+  <div style="font-size:12px;color:var(--sub);line-height:1.7;margin-bottom:14px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.25);border-radius:10px;padding:12px 16px">
+    <b style="color:#ff9f43">从"单 Agent 调多工具"升级为名副其实的"多 Agent 协同"</b>：三个立场对立的 Agent 就同一套硬证据展开对抗——
+    <b style="color:#ff6b6b">控方</b>尽力指控、<b style="color:#4a9eff">辩方</b>为每条指控找合理经营解释（辩方越强 = 越不误报）、<b style="color:#4ee39a">裁判</b>逐条裁定并收敛。
+    <span style="color:var(--dim)">铁律：确定性信号命中的事实、监管已认定的违规为硬事实，<b>不可辩驳</b>；控辩只交锋"灰色地带的解释"，裁判不得把已发生的事实辩没。</span>
+  </div>
+  <div id="debateRounds" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px"></div>
+  <div class="rgrid" style="grid-template-columns:1fr 1fr">
+    <div class="card2" style="border-color:#ff6b6b">
+      <h3 style="color:#ff6b6b">🔴 控方 Agent · 风险指控</h3>
+      <div id="prosBox"></div>
+    </div>
+    <div class="card2" style="border-color:#4a9eff">
+      <h3 style="color:#4a9eff">🔵 辩方 Agent · 合理解释</h3>
+      <div id="defBox"></div>
+    </div>
+  </div>
+  <div class="card2" style="margin-top:16px;border-color:#4ee39a">
+    <h3 style="color:#4ee39a">⚖️ 裁判 Agent · 对抗后裁定</h3>
+    <div id="judgeBox"></div>
+  </div>
+  <div class="verdict" id="debateVerdict" style="border-color:#ff9f43;margin-top:16px"></div>
+</div>
+
+<!-- 综合结论 -->
+<div class="verdict" id="verdict"></div>
+
+<!-- 信号自我校准案例（把"发现并修正误报"沉淀为可信度证据）-->
+<details style="margin-top:16px;background:var(--panel,#141a24);border:1px solid var(--line);border-radius:10px;padding:0 16px">
+  <summary style="cursor:pointer;padding:14px 0;font-size:14px;font-weight:700;color:#4a9eff;list-style:none">
+    🔬 信号可靠性 · 自我校准案例：格力电器（000651）误报的发现与修正
+  </summary>
+  <div style="font-size:13px;color:var(--sub);line-height:1.8;padding-bottom:16px;border-top:1px dashed var(--line);padding-top:12px">
+    <b style="color:#ff9f43">现象</b>：初版对格力跑出"极高"档，其中"现金不生息"信号触发（1575亿货币资金仅11.6亿利息，隐含收益率0.74%）。<br>
+    <b style="color:#ff6b6b">根因</b>：取数只读了资产端 <span class="mono">INTEREST_INCOME</span> 科目（11.6亿），漏了财务费用冲抵的 <span class="mono">FE_INTEREST_INCOME</span>（46.5亿）——制造业+财务公司的利息收入分列两处，导致利息被低估 6 倍。真实隐含收益率约 2.95%，资金收益健康。<br>
+    <b style="color:var(--green)">修正</b>：取数改为两科目<b>取较大值</b>，更贴近真实资金收益。修正后格力降为"高"档，误报的"不生息"信号消失；同一改动对康美（真阳性）无影响，该报的仍报。<br>
+    <b style="color:#4a9eff">留下的"高"档是真信号</b>：格力"存贷双高 + 货币资金超净资产（162%）"客观存在，是市场对其类金融业务的长期公开质疑——信号如实反映，交人工复核，不定性。<br>
+    <b style="color:#a78bfa">这说明什么</b>：确定性信号<b>可审计、可复现、可校准</b>——误报能被逐条判据定位到具体科目并修正，这正是"规则+人工复核"相比黑盒判造假模型的核心优势。
+  </div>
+</details>
+
+<!-- 合规声明 -->
+<div class="compliance">
+  <b>⚠ 合规边界声明</b>：本系统输出为基于公开信息的<b>风险提示与辅助研判</b>，标注置信度与依据来源；
+  <b>不构成审计结论、投资建议，不对任何主体作违法/有罪定性</b>，判罚与赔偿以监管、司法机关最终裁决为准。
+  高风险线索强制标记"需人工复核"。仅处理公开信息侧已认定案例，不介入内幕交易等需侦查权的非公开领域。
+  数据来源：公开年报、证监会处罚决定书、法院判决书、国家法律法规数据库官方原文。
+</div>
+</div>
+
+</div>
+
+<!-- 价值发现面板（同一套引擎反过来用：找被漏看的真价值） -->
+<div id="valuePanel" style="display:none">
+  <h2><span class="n" style="background:#4ee39a">6</span> 💎 价值发现（链热单体冷错配扫描 → 归属核验 → 兜底排雷）</h2>
+  <div class="panel">
+    <div style="font-size:12px;color:var(--dim);margin-bottom:12px">
+      同一套"看穿真伪"的引擎<b style="color:#4ee39a">反过来用</b>：在一条已走热的产业链里，找"产业上真属于这条链、但估值与关注度还在低位"的标的。
+      <b>不预测涨跌、不给买卖建议</b>——机器发现错配，人做判断。<span style="color:#ffcf5c">当前为结构示意数据，判据逻辑确定性可复现。</span>
+    </div>
+    <!-- ① 链温度 -->
+    <div class="card2" id="chainHotCard" style="display:none;margin-bottom:12px;border-color:#4ee39a">
+      <h3 style="margin:0 0 8px">🔥 <span id="chainName"></span> · 链温度</h3>
+      <div id="chainHotBody" style="font-size:13px;color:var(--sub);line-height:1.7"></div>
+    </div>
+    <!-- ②③④ 候选卡片 -->
+    <div id="valueCandidates"></div>
+    <!-- 合规声明 -->
+    <div class="compliance" style="margin-top:14px">
+      <b>⚠ 合规边界</b>：输出为"值得人工深看的候选 + 证据链"，<b>不预测涨跌、不构成投资建议、不给估值数字</b>；
+      归属核验默认怀疑——证据不足不放行，宁可漏掉机会，不把题材联想当真实关联。机器发现错配，人判断机会还是陷阱。
+    </div>
+  </div>
+</div>
+
+<!-- 决策日志面板（第四层约束：唯一能校准"判断准不准"的机制） -->
+<div id="logPanel" style="display:none">
+  <h2><span class="n" style="background:#ffcf5c;color:#000">7</span> 📓 决策日志（现实验证：唯一能校准"判断准不准"的机制）</h2>
+  <div class="panel">
+    <div style="font-size:12px;color:var(--dim);margin-bottom:12px">
+      不记资金流水，记<b>"做判断当下你怎么想的"</b>，事后对答案——防"赢了编故事"。
+      <b style="color:#ffcf5c">不用买，观察走势即可验证。</b>前三层约束保证系统<b>诚实</b>，只有这一层（现实验证）检验它<b>正确</b>。
+    </div>
+    <!-- 录入 -->
+    <div class="card2" style="margin-bottom:12px">
+      <h3 style="margin:0 0 10px">✍️ 录入一条判断（前瞻记录，结果留空待补）</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;font-size:13px">
+        <input id="lgDate" placeholder="日期 如2026-08-07" style="background:var(--card);color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-family:inherit">
+        <input id="lgTarget" placeholder="标的@价 如XX¥42" style="background:var(--card);color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-family:inherit">
+        <select id="lgSource" style="background:var(--card);color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-family:inherit">
+          <option value="产业落地">入口：产业落地</option>
+          <option value="产业政策">入口：产业政策</option>
+          <option value="行业热点">入口：行业热点</option>
+          <option value="科技趋势">入口：科技趋势</option>
+          <option value="其他">入口：其他</option>
+        </select>
+        <input id="lgSys" placeholder="系统判断 如强错配·候选" style="background:var(--card);color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-family:inherit">
+        <input id="lgMy" placeholder="我的判断 如信/存疑，因为…" style="background:var(--card);color:#fff;border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-family:inherit">
+        <button class="run" onclick="logAdd()" style="background:linear-gradient(135deg,#ffcf5c,#ff9f43);color:#000">＋ 存入日志</button>
+      </div>
+    </div>
+    <!-- 统计 -->
+    <div class="card2" id="logStatsCard" style="border-color:#ffcf5c">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <h3 style="margin:0">📊 诚实统计</h3>
+        <button class="run" onclick="logStats()" style="font-size:12px;padding:6px 12px">刷新统计</button>
+      </div>
+      <div id="logStatsBody" style="font-size:13px;color:var(--sub);margin-top:10px">点"刷新统计"查看。</div>
+    </div>
+    <div class="compliance" style="margin-top:12px">
+      <b>⚠ 诚实边界</b>：只对<b>已补真实结果</b>的记录算准确率；未补结果的只计"待验证"。
+      一条已验证结果都没有时，显示"待积累"——<b>绝不虚报未发生的胜率</b>（这正是第四层约束的自我要求）。
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 全局错误捕获：任何脚本错误直接显到状态栏（诊断"按钮无反应"）============
+window.addEventListener('error', function(ev){
+  var st=document.getElementById('status');
+  if(st){st.style.color='#ff6b6b';
+    st.textContent='✗ 脚本错误：'+(ev.message||ev.error)+'  @'+((ev.filename||'').split('/').pop())+':'+ev.lineno;}
+  console.error('RiskCopilot error:', ev.error||ev.message);
+});
+window.addEventListener('unhandledrejection', function(ev){
+  var st=document.getElementById('status');
+  if(st){st.style.color='#ff6b6b';st.textContent='✗ 异步错误：'+(ev.reason&&ev.reason.message||ev.reason);}
+});
+// 兜底：若上次操作异常把 running 卡成 true，点任意运行按钮前可先手动复位（双击标题触发）
+function __resetRunning(){running=false;
+  ['runBtn','liveBtn','deepBtn','debateBtn','orchBtn','taskBtn'].forEach(function(id){var b=document.getElementById(id);if(b)b.disabled=false;});
+  var st=document.getElementById('status');if(st){st.style.color='';st.textContent='↺ 已复位，可重新操作';}}
+
+// ============ 数据（康美真实数据，来自 signals/law 引擎输出）============
+const DATA = {
+  kangmei:{
+    name:"康美药业 600518",
+    signals:[
+      {y:"2016",m:"🔴极高",r:"—",p:"⚪",agg:"🔴极高",cls:"red"},
+      {y:"2017",m:"🔴极高",r:"🟡中",p:"⚪",agg:"🔴极高",cls:"red"},
+      {y:"2018",m:"🟠高",r:"⚪",p:"⚪",agg:"🟠高",cls:"warn"},
+    ],
+    hits:[
+      "2017 货币资金/净资产=106.6%（超净资产本身，极端异常）",
+      "存贷双高：账上货币资金341.5亿 却背有息负债221.8亿",
+      "现金隐含收益率0.79%：342亿货币资金只产生2.69亿利息，钱'不生息'",
+      "应收账款增速40.6% 远超营收增速22.3%（1.82倍，收入挂账未收现）",
+    ],
+    law:`<b>行政处罚</b>（《证券法》2019 修订 第197条第2款）<br>
+      · 对公司：100万–1000万元<br>· 对直接责任人：50万–500万元<br>· 控股股东组织指使：100万–1000万元<br><br>
+      <b>刑事责任</b>（《刑法》第161条 违规披露罪）<br>
+      · 已达立案追诉标准（损失≥50万、虚增≥30%，命中第一/二/四/八项）<br>
+      · 基本档 5年以下；情节特别严重 5–10年<br><br>
+      <b>民事索赔</b>（2022 最高法虚假陈述司法解释）<br>
+      · 投资差额损失 + 佣金印花税，扣除系统风险<br>
+      · 判例锚点：全国首例证券集体诉讼判赔 <b class="green">24.59亿</b>`,
+    src:`<b>年报数据</b>：康美2016–2018年报（逐页核对，标注页码）<span class="pill live">真实</span><br>
+      <b>造假认定</b>：证监会处罚决定书〔2020〕24号<span class="pill live">真实</span><br>
+      <b>法条依据</b>：国家法律法规数据库官方原文，5条逐字核对<span class="pill live">真实</span><br>
+      <b>关联方图谱</b>：年报"关联方专章"+FiGraph公开数据集<span class="pill live">公开可取</span><br>
+      <b>交叉铁证</b>：2016经营现金流 +16.03亿 →更正后 −22.05亿（符号翻转）<br>
+      <b>银行流水核对</b>：伪造银行对账单虚增货币资金<span class="pill plan">复赛接入</span>`,
+    verdict:{t:"🔴 综合研判：极高风险（造假已由证监会认定）",
+      p:`康美药业在 2016–2017 连续触发最高风险档。核心矛盾：<b>账上巨额货币资金却不生息、同时大额举债付息</b>——真钱不会既趴账上不生息又借高息负债。信号库当年即可估算"真实货币资金约42亿"，与 2018 年报重述值 <b class="green">42.07亿</b> 分毫不差。<br><br>
+      <b>深洞察</b>：利润质量信号未触发，恰因造假者做平了利润表与现金流量表——但做不平"存贷双高+现金不生息"这个结构矛盾。<b class="warn">单点合规，交叉见鬼</b>，这正是多信号交叉+图结构分析的价值。`},
+    gnn:"kangmei",
+    profile:{name:"康美药业股份有限公司",short:"康美药业",industry:"医药制造业",market:"上交所",
+      legal:"马兴田（时任）",capital:"约49.7亿元",found:"1997-06-18",listed:"2001-03-19",
+      index:"曾入沪深300",main:"中药饮片、中药材贸易、中西药品、医疗器械的研发生产与销售，医药电商及医疗服务。",
+      products:"中药饮片、中药材、化学药、保健品",
+      addr:"广东省普宁市",scope:"中药饮片、中成药、化学药品制剂的生产销售；中药材种植、贸易；医药物流等。"}
+  },
+  normal:{
+    name:"某正常医药股（示意）",
+    signals:[
+      {y:"2016",m:"⚪",r:"—",p:"⚪",agg:"⚪无",cls:"green"},
+      {y:"2017",m:"⚪",r:"⚪",p:"⚪",agg:"⚪无",cls:"green"},
+      {y:"2018",m:"🔵低",r:"⚪",p:"⚪",agg:"🔵低",cls:"green"},
+    ],
+    hits:["货币资金/总资产 22%（正常区间）","现金收益率 2.1%（高于市场存款利率，钱真实生息）","无存贷双高，应收增速与营收匹配"],
+    law:`<b>未触发追责测算</b><br>财务信号处于正常区间，无已认定违规事实，不进入处置追责流程。<br><br>这体现信号的<b>区分度</b>——不误伤正常公司（信号库的"反证/排除项"生效）。`,
+    src:`<b>年报数据</b>：示意对照数据<span class="pill plan">示意</span><br>用于演示信号<b>不误报</b>的能力。`,
+    verdict:{t:"🟢 综合研判：低风险 · 不触发追责",
+      p:`对照组财务指标处于行业正常区间，信号库未触发高风险档。<br><br>这证明系统<b>有区分度、不见谁都报警</b>——正是它能不误伤正常公司、可用于真实尽调的前提。`},
+    gnn:"normal"
+  }
+};
+
+const STAGE_R = {
+  kangmei:["聚合5源信号，货币资金异常置顶","关系图定位大股东116亿占用结构","匹配证券法197/刑法161/司法解释","校验：只提示不定性，标需人工复核","沉淀为种子信号#001入库"],
+  normal:["5源信号均在正常区间","关系图无异常闭环结构","无违规事实，不进入追责","校验通过，低风险","记录为正常对照样本"]
+};
+
+// ============ GNN 关系图 SVG ============
+function gnnSVG(type){
+  if(type==="kangmei"){
+    return `<svg viewBox="0 0 460 300">
+      <defs><marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6" fill="#ff6b6b"/></marker>
+        <marker id="ag" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6" fill="#6c7fb0"/></marker></defs>
+      <!-- 正常边 -->
+      <line x1="230" y1="150" x2="90" y2="70" stroke="#6c7fb0" stroke-width="1.5" marker-end="url(#ag)"/>
+      <line x1="230" y1="150" x2="380" y2="70" stroke="#6c7fb0" stroke-width="1.5" marker-end="url(#ag)"/>
+      <!-- 异常资金边 高亮 -->
+      <line x1="230" y1="150" x2="230" y2="255" stroke="#ff6b6b" stroke-width="3" marker-end="url(#ar)"/>
+      <line x1="230" y1="255" x2="90" y2="230" stroke="#ff6b6b" stroke-width="2.5" marker-end="url(#ar)"/>
+      <line x1="230" y1="255" x2="380" y2="230" stroke="#ff6b6b" stroke-width="2.5" marker-end="url(#ar)"/>
+      <text x="238" y="205" fill="#ff6b6b" font-size="11">占用116亿</text>
+      <!-- 节点 -->
+      <g font-size="11" text-anchor="middle">
+        <circle cx="230" cy="150" r="34" fill="#16214a" stroke="#4da3ff" stroke-width="2"/>
+        <text x="230" y="147" fill="#fff">康美药业</text><text x="230" y="160" fill="#9fb2df" font-size="9">600518</text>
+        <circle cx="90" cy="70" r="26" fill="#16214a" stroke="#6c7fb0"/><text x="90" y="73" fill="#9fb2df">供应商</text>
+        <circle cx="380" cy="70" r="26" fill="#16214a" stroke="#6c7fb0"/><text x="380" y="73" fill="#9fb2df">客户</text>
+        <circle cx="230" cy="255" r="30" fill="#2a1420" stroke="#ff6b6b" stroke-width="2.5"/>
+        <text x="230" y="252" fill="#ff6b6b">马兴田</text><text x="230" y="265" fill="#ff9b9b" font-size="9">实控人</text>
+        <circle cx="90" cy="230" r="26" fill="#2a1420" stroke="#ff6b6b" stroke-width="2"/><text x="90" y="227" fill="#ff9b9b" font-size="9">康美实业</text><text x="90" y="238" fill="#ff9b9b" font-size="8">控股股东</text>
+        <circle cx="380" cy="230" r="26" fill="#2a1420" stroke="#ff6b6b" stroke-width="2"/><text x="380" y="227" fill="#ff9b9b" font-size="9">关联方</text><text x="380" y="238" fill="#ff9b9b" font-size="8">买股/偿债</text>
+      </g>
+      <text x="230" y="20" fill="#ffcf5c" font-size="12" text-anchor="middle">⚠ GNN 识别：大股东经关联方链条抽走资金的异常结构</text>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 460 300">
+    <defs><marker id="ag2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#4ee39a"/></marker></defs>
+    <line x1="230" y1="150" x2="90" y2="80" stroke="#4ee39a" stroke-width="1.5" marker-end="url(#ag2)"/>
+    <line x1="230" y1="150" x2="380" y2="80" stroke="#4ee39a" stroke-width="1.5" marker-end="url(#ag2)"/>
+    <line x1="230" y1="150" x2="230" y2="250" stroke="#4ee39a" stroke-width="1.5" marker-end="url(#ag2)"/>
+    <g font-size="11" text-anchor="middle">
+      <circle cx="230" cy="150" r="34" fill="#16214a" stroke="#4ee39a" stroke-width="2"/><text x="230" y="153" fill="#fff">目标公司</text>
+      <circle cx="90" cy="80" r="24" fill="#16214a" stroke="#4ee39a"/><text x="90" y="83" fill="#9fb2df">供应商</text>
+      <circle cx="380" cy="80" r="24" fill="#16214a" stroke="#4ee39a"/><text x="380" y="83" fill="#9fb2df">客户</text>
+      <circle cx="230" cy="250" r="24" fill="#16214a" stroke="#4ee39a"/><text x="230" y="253" fill="#9fb2df">股东</text>
+    </g>
+    <text x="230" y="20" fill="#4ee39a" font-size="12" text-anchor="middle">✓ 关系结构正常，无异常资金闭环</text>
+  </svg>`;
+}
+
+// ============ 交互逻辑 ============
+let running=false;
+// 复用的流水线动画：按给定 5 段文案逐格点亮，播完回调 done()
+function animateStages(texts, interval, done){
+  document.querySelectorAll('.stage').forEach(s=>s.className='stage');
+  for(let k=0;k<5;k++){const el=document.getElementById('r'+k);if(el)el.textContent='';}
+  let i=0;
+  (function step(){
+    if(i>0){const p=document.querySelector('.stage[data-i="'+(i-1)+'"]');if(p)p.className='stage done';}
+    if(i>=5){if(done)done();return;}
+    const s=document.querySelector('.stage[data-i="'+i+'"]');if(s)s.className='stage on';
+    const el=document.getElementById('r'+i);if(el)el.textContent=texts[i]||'';
+    i++;setTimeout(step,interval||500);
+  })();
+}
+
+// 彻底清空所有结果面板——每次新查询（快查/深度/经典/任务）入口先调，杜绝跨公司数据残留
+function clearAllPanels(){
+  // 深度研判 / 控辩互搏面板整体隐藏（可能属于上一家公司）
+  const dp=document.getElementById('deepPanel');if(dp)dp.style.display='none';
+  const dbp=document.getElementById('debatePanel');if(dbp)dbp.style.display='none';
+  const orp=document.getElementById('orchPanel');if(orp)orp.style.display='none';
+  const vp=document.getElementById('valuePanel');if(vp)vp.style.display='none';
+  const lgp=document.getElementById('logPanel');if(lgp)lgp.style.display='none';
+  // 逐个清空可能残留旧公司内容的容器
+  ['sigTable','sigHits','gnnBox','lawBox','srcBox','verdict','matrixGrid','matrixSummary',
+   'intentBanner','planBox','traceBox','redflagBox','rfMeta','deepVerdict','deepEngine',
+   'debateRounds','prosBox','defBox','judgeBox','debateVerdict','orchSummary','orchTargets',
+   'pfTags','pfIntro','pfGrid','pfScope','pfName','pfCode'].forEach(function(id){
+    const el=document.getElementById(id);if(el)el.innerHTML='';
+  });
+  const mc=document.getElementById('matrixCard');if(mc)mc.style.display='none';
+  const pc=document.getElementById('profileCard');if(pc)pc.style.display='none';
+  const ab=document.getElementById('actionBox');if(ab)ab.style.display='none';
+  // 流水线归零
+  document.querySelectorAll('.stage').forEach(function(s){s.className='stage';});
+  for(let k=0;k<5;k++){const el=document.getElementById('r'+k);if(el)el.textContent='';}
+}
+
+// ===== 价值发现：链热单体冷错配扫描 → 归属核验 → 兜底排雷 =====
+const VERDICT_LABEL={real:'✅ 真实产业关联',theme_only:'⚠️ 仅题材联想',uncertain:'❓ 存疑',skipped:'（未核验）'};
+const FINAL_LABEL={candidate:'✅ 值得深看的候选',trap_suspect:'🟠 疑价值陷阱（冷得有理由）',theme_rejected:'⚠️ 仅题材联想，已排除'};
+const FINAL_COLOR={candidate:'#4ee39a',trap_suspect:'#ff9f43',theme_rejected:'#6c7fb0'};
+const COLD_COLOR={'强错配':'#4ee39a','中错配':'#ffcf5c','弱错配':'#4a9eff','微错配':'#6c7fb0','无错配':'#6c7fb0'};
+
+async function runValueScan(){
+  if(running)return; running=true;
+  const st=document.getElementById('valueStatus');
+  const chain=document.getElementById('chainSel').value;
+  clearAllPanels();
+  document.getElementById('valuePanel').style.display='block';
+  document.getElementById('valuePanel').scrollIntoView({behavior:'smooth',block:'start'});
+  // 实时计时，避免首次未缓存的链跑控辩(~2分钟)时界面看起来"卡住不动"
+  let secs=0;
+  const tick=setInterval(function(){
+    secs++;
+    st.style.color='#4ee39a';
+    st.textContent='⏳ 【'+chain+'】① 错配扫描 → ② 归属核验(控辩LLM) → ③ 排雷… 已'+secs+'秒'
+      +(secs>8?'（首次跑该链含控辩较慢，缓存后再点秒出）':'');
+  },1000);
+  try{
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),180000);
+    const resp=await fetch(API+'/api/value_scan?chain='+encodeURIComponent(chain),{signal:ctrl.signal});
+    clearTimeout(t);
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    clearInterval(tick);
+    if(data.error){st.style.color='#ff6b6b';st.textContent='✗ '+data.error;running=false;return;}
+    renderValueScan(data);
+    document.getElementById('logPanel').style.display='block';  // 价值发现配套决策日志（现实验证）
+    logStats();
+    st.style.color='#4ee39a'; st.textContent='✓ 【'+chain+'】价值发现完成（'+secs+'秒'+(data.cached?'·缓存秒出':'·已存缓存,下次秒出')+'）';
+  }catch(e){
+    clearInterval(tick);
+    st.style.color='#ff6b6b';
+    st.textContent=((e.message||'').includes('Failed to fetch')||e.name==='AbortError')
+      ?'✗ 超时/连不上后端。该链首次跑控辩需~2分钟；请确认 python3 backend.py 已启动，稍等后重点一次（会命中缓存秒出）':'✗ '+e.message;
+  }finally{running=false;}
+}
+
+function renderValueScan(data){
+  // ① 链温度
+  document.getElementById('chainName').textContent=data.chain||'';
+  const hot=document.getElementById('chainHotCard'); hot.style.display='block';
+  const hotBody=(data.chain_hot?'🔥 <b style="color:#4ee39a">链在热</b>：':'❄️ 链不热：')
+    +(data.chain_hot_reason||[]).map(r=>'<div>· '+r+'</div>').join('');
+  document.getElementById('chainHotBody').innerHTML=hotBody
+    +(data.skipped_note?'<div style="color:#ffcf5c;margin-top:6px">'+data.skipped_note+'</div>':'');
+  // ②③④ 候选卡片
+  const box=document.getElementById('valueCandidates'); box.innerHTML='';
+  const results=data.results||[];
+  if(!results.length){box.innerHTML='<div class="card2" style="color:var(--dim)">本链未扫出"链热单体冷"错配候选。</div>';return;}
+  results.forEach(function(e){
+    const attr=e.attribution||{};
+    const rounds=(attr.rounds||[]).map(function(r){
+      return '<div style="font-size:12px;color:var(--sub);margin:2px 0">→ <b>'+r.role+'</b>：'+r.action+' —— '+r.result+'</div>';
+    }).join('');
+    const dr=e.derisk;
+    const deriskHtml=dr
+      ?'<div style="margin-top:8px"><b style="color:#4a9eff">③ 兜底排雷</b>：'+(dr.clean?'<span style="color:#4ee39a">'+dr.level+'</span>':'<span style="color:#ff9f43">'+dr.level+'</span>')
+        +(dr.basis||[]).map(b=>'<div style="font-size:11px;color:var(--dim)">· '+b+'</div>').join('')+'</div>'
+      :'<div style="margin-top:8px;font-size:12px;color:var(--dim)"><b>③ 兜底排雷</b>：未执行（归属未通过，题材联想候选直接排除，不浪费排雷算力）</div>';
+    const signals=(e.signals||[]).map(s=>'<div style="font-size:12px;color:var(--sub)">· '+s+'</div>').join('');
+    box.insertAdjacentHTML('beforeend',
+      '<div class="card2" style="margin-bottom:12px;border-color:'+(FINAL_COLOR[e.final]||'#2a3a6b')+'">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
+      +'<h3 style="margin:0">'+e.name+' <span class="mono">'+e.code+'</span></h3>'
+      +'<span style="font-size:12px;color:'+(COLD_COLOR[e.cold_level]||'#6c7fb0')+'">错配强度：'+e.cold_level+'（'+e.cold_score+'分）</span></div>'
+      +'<div style="margin-top:8px"><b style="color:#4ee39a">① 错配信号</b>（为什么"链热单体冷"）：'+signals+'</div>'
+      +'<div style="margin-top:8px"><b style="color:#a78bfa">② 归属核验</b>（控辩互搏 · '+(attr.mode||'')+'）：<b style="color:'+(attr.verdict==='real'?'#4ee39a':attr.verdict==='theme_only'?'#ff9f43':'#6c7fb0')+'">'+(VERDICT_LABEL[attr.verdict]||attr.verdict||'')+'</b> '+(attr.confidence?'置信度'+attr.confidence:'')+'</div>'
+      +(rounds?'<div style="margin:4px 0 4px 12px">'+rounds+'</div>':'')
+      +(attr.reason?'<div style="font-size:12px;color:var(--dim);margin-left:12px">裁定理由：'+attr.reason+'</div>':'')
+      +deriskHtml
+      +'<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-weight:700;color:'+(FINAL_COLOR[e.final]||'#fff')+'">④ 结论：'+(FINAL_LABEL[e.final]||e.final)+'</div>'
+      +'</div>');
+  });
+}
+
+// ===== 决策日志：录入 + 诚实统计 =====
+async function logAdd(){
+  const date=document.getElementById('lgDate').value.trim();
+  const target=document.getElementById('lgTarget').value.trim();
+  if(!date||!target){alert('至少填日期和标的');return;}
+  const q=new URLSearchParams({date,target,
+    source:document.getElementById('lgSource').value,
+    sys_judge:document.getElementById('lgSys').value.trim(),
+    my_judge:document.getElementById('lgMy').value.trim()});
+  try{
+    const r=await fetch(API+'/api/log/add?'+q.toString()); const d=await r.json();
+    if(d.ok){document.getElementById('lgTarget').value='';document.getElementById('lgSys').value='';document.getElementById('lgMy').value='';logStats();}
+  }catch(e){alert('连不上后端；请先启动 python3 backend.py');}
+}
+
+async function logStats(){
+  const body=document.getElementById('logStatsBody');
+  try{
+    const r=await fetch(API+'/api/log/stats'); const d=await r.json();
+    let html='<div>共 <b>'+d.total+'</b> 条 · 已验证 <b style="color:#4ee39a">'+d.resolved+'</b> · 待验证 <b style="color:#ffcf5c">'+d.pending+'</b></div>';
+    if(d.accuracy===null){
+      html+='<div style="color:#ffcf5c;margin-top:6px">📌 '+d.honest_note+'</div>';
+    }else{
+      html+='<div style="margin-top:6px">已验证准确率：<b style="color:#4ee39a">'+(d.accuracy*100).toFixed(0)+'%</b>（'+d.hit+'/'+d.resolved+'）</div>';
+      const bs=Object.entries(d.by_source||{}).map(([k,v])=>k+' '+v.hit+'/'+v.n).join(' · ');
+      if(bs)html+='<div style="font-size:12px;color:var(--dim);margin-top:4px">按入口：'+bs+'</div>';
+      html+='<div style="font-size:11px;color:var(--dim);margin-top:4px">'+d.honest_note+'</div>';
+    }
+    // 最近几条
+    const recent=(d.rows||[]).slice(-5).reverse().map(function(r){
+      const stat=r.correct===null?'⏳待验证':(r.correct?'✅对':'❌错');
+      return '<div style="font-size:12px;color:var(--sub);border-top:1px solid var(--line);padding:4px 0">'
+        +r.date+' · '+r.target+' <span style="color:var(--dim)">['+(r.source||'')+']</span> · '+stat+'</div>';
+    }).join('');
+    if(recent)html+='<div style="margin-top:8px"><b style="font-size:12px">最近记录：</b>'+recent+'</div>';
+    body.innerHTML=html;
+  }catch(e){body.innerHTML='<span style="color:#ff6b6b">连不上后端；请先启动 python3 backend.py</span>';}
+}
+
+function run(){
+  try{
+  if(running){__resetRunning();}  // 若被上次异常卡住，先自愈复位再继续
+  clearAllPanels();
+  running=true;
+  const key=document.getElementById('company').value;
+  const d=DATA[key];
+  if(!d){throw new Error('未找到案例数据 key='+key);}
+  const btn=document.getElementById('runBtn');
+  const st=document.getElementById('status');
+  btn.disabled=true;
+  document.getElementById('result').style.display='none';
+  // 重置流水线
+  document.querySelectorAll('.stage').forEach(s=>{s.className='stage';});
+  for(let i=0;i<5;i++)document.getElementById('r'+i).textContent='';
+  st.innerHTML='<span class="spin"></span> Agent 协同处理中…';
+
+  const rtext=STAGE_R[key];
+  let i=0;
+  function step(){
+    if(i>0){const prev=document.querySelector('.stage[data-i="'+(i-1)+'"]');prev.className='stage done';}
+    if(i>=5){
+      st.textContent='✓ 研判完成';btn.disabled=false;running=false;
+      showResult(d);return;
+    }
+    const s=document.querySelector('.stage[data-i="'+i+'"]');
+    s.className='stage on';
+    document.getElementById('r'+i).textContent=rtext[i];
+    i++;
+    setTimeout(step,650);
+  }
+  step();
+  }catch(e){
+    const st=document.getElementById('status');
+    if(st){st.style.color='#ff6b6b';st.textContent='✗ run() 失败：'+e.message;}
+    running=false;var b=document.getElementById('runBtn');if(b)b.disabled=false;
+    console.error(e);
+  }
+}
+
+// ===== 实时查询任意A股 =====
+const API="http://127.0.0.1:8199";
+
+// ---- 后端状态灯 + 关闭按钮 ----
+async function pingBackend(){
+  const dot=document.getElementById('svc-dot'), txt=document.getElementById('svc-text'), stop=document.getElementById('svc-stop');
+  if(!dot) return;
+  try{
+    const c=new AbortController(); const t=setTimeout(()=>c.abort(),2500);
+    const r=await fetch(API+'/api/health',{signal:c.signal}); clearTimeout(t);
+    const d=await r.json();
+    dot.className='dot on';
+    txt.textContent='后端在线'+(d.llm?' · LLM已接入':' · LLM降级');
+    stop.disabled=false;
+  }catch(e){
+    dot.className='dot off';
+    txt.innerHTML='后端未启动 · 双击 <b>▶︎ 双击启动Demo.command</b>';
+    stop.disabled=true;
+  }
+}
+async function stopBackend(){
+  if(!confirm('确定关闭后端服务？关闭后页面将无法查询，需要时双击「▶︎ 双击启动Demo.command」重新开启。'))return;
+  const stop=document.getElementById('svc-stop'); stop.disabled=true;
+  try{ await fetch(API+'/api/shutdown'); }catch(e){}
+  setTimeout(pingBackend,900);
+}
+pingBackend(); setInterval(pingBackend,5000);
+// 统一取数：连得上后端→实时查任意A股；连不上→回退内置快照(standalone版才有SNAPSHOT)
+async function apiGet(kind, key){
+  const path=(kind==='task'||kind==='orchestrate')?`/api/${kind}?q=${encodeURIComponent(key)}`:`/api/${kind}?code=${key}`;
+  // 含真实 LLM 的重端点(控辩/深研/编排/任务)首次未缓存需~3分钟，给 300s；轻端点 95s 足够
+  const HEAVY={debate:1,deepdive:1,orchestrate:1,task:1};
+  const timeoutMs=HEAVY[kind]?300000:95000;
+  try{
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),timeoutMs);
+    const resp=await fetch(API+path,{signal:ctrl.signal}); clearTimeout(t);
+    const data=await resp.json();
+    return {data, offline:false};
+  }catch(e){
+    const s=(window.SNAPSHOT&&window.SNAPSHOT[kind])?window.SNAPSHOT[kind][key]:null;
+    if(s){offlineBanner(true); return {data:s, offline:true};}
+    throw e;
+  }
+}
+function offlineBanner(show){
+  let b=document.getElementById('__offline');
+  if(!b){b=document.createElement('div');b.id='__offline';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99998;text-align:center;'
+      +'background:#7c5cff;color:#fff;font-size:13px;padding:6px 10px;font-family:-apple-system,sans-serif';
+    document.body.appendChild(b);}
+  b.style.display=show?'block':'none';
+  b.textContent='📦 离线快照模式：展示内置的康美/茅台/格力真实研判结果（后端未连接）。启动后端可实时查询任意A股。';
+}
+async function runLive(){
+  if(running) return;
+  const code=document.getElementById('codeInput').value.trim();
+  const st=document.getElementById('status');
+  if(!/^\d{6}$/.test(code)){st.textContent='⚠ 请输入6位A股代码';st.style.color='#ffcf5c';return;}
+  running=true;
+  document.getElementById('liveBtn').disabled=true;
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('result').style.display='none';
+  clearAllPanels();
+  st.style.color='';st.innerHTML='<span class="spin"></span> 拉取真实财报中…';
+
+  let data;
+  try{
+    const r=await apiGet('analyze', code);
+    data=r.data;
+    if(data.error){throw new Error(data.error);}
+  }catch(e){
+    st.innerHTML='';st.style.color='#ff6b6b';
+    st.textContent = (e.message||'').includes('Failed to fetch')||(e.name==='AbortError')
+      ? '✗ 连不上后端；且该股不在内置快照内。请启动后端，或查康美600518/茅台600519/格力000651' : '✗ '+e.message;
+    running=false;document.getElementById('liveBtn').disabled=false;document.getElementById('runBtn').disabled=false;
+    return;
+  }
+
+  // 跑流水线动画
+  const rtext=["实时聚合年报科目，计算比率","关系图谱分析（FiGraph/年报关联方）","匹配可适用法条","校验：只提示不定性，标需人工复核","沉淀研判记录"];
+  let i=0;
+  function step(){
+    if(i>0)document.querySelector('.stage[data-i="'+(i-1)+'"]').className='stage done';
+    if(i>=5){st.textContent='✓ 研判完成（真实数据）';running=false;
+      document.getElementById('liveBtn').disabled=false;document.getElementById('runBtn').disabled=false;
+      showLive(data,code);return;}
+    const s=document.querySelector('.stage[data-i="'+i+'"]');s.className='stage on';
+    document.getElementById('r'+i).textContent=rtext[i];i++;setTimeout(step,500);
+  }
+  step();
+}
+
+async function runTask(){
+  if(running) return;
+  const q=document.getElementById('taskInput').value.trim();
+  const st=document.getElementById('status');
+  if(!q){st.textContent='⚠ 请先输入一个任务';st.style.color='#ffcf5c';return;}
+  running=true;
+  ['taskBtn','liveBtn','deepBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=true;});
+  clearAllPanels();
+  st.style.color='';st.innerHTML='<span class="spin"></span> Agent 正在理解任务、拆解、调用能力…（约15-40秒）';
+  let data;
+  try{
+    const r=await apiGet('task', q);
+    data=r.data;
+  }catch(e){
+    st.innerHTML='';st.style.color='#ff6b6b';
+    st.textContent=((e.message||'').includes('Failed to fetch')||e.name==='AbortError')?'✗ 连不上后端；该任务不在内置快照内。可试内置示例：600519和000651哪个财务更干净':'✗ '+e.message;
+    running=false;['taskBtn','liveBtn','deepBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+    return;
+  }
+  running=false;['taskBtn','liveBtn','deepBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+  // 域外/无公司 → 直接提示
+  if(!data.results||!data.results.length){
+    st.innerHTML='';st.style.color='#ffcf5c';st.textContent='💬 '+(data.message||'未识别到可研判的公司');
+    return;
+  }
+  st.textContent='✓ 任务完成';
+  document.getElementById('result').style.display='block';
+  // 展示第一家的完整深度研判（含意图复述横幅）
+  const first=data.results.find(r=>!r.error)||data.results[0];
+  if(first.error){st.style.color='#ffcf5c';st.textContent='⚠ '+first.error;return;}
+  fillProfile(first.profile,first.code);
+  showDeepdive(first, {restated:data.restated, source:data.source, compare:data.compare,
+                       intent:data.intent_type, others:data.results});
+  document.getElementById('deepPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ===== 总控编排 Agent =====
+async function runOrchestrate(){
+  if(running) return;
+  const q=document.getElementById('taskInput').value.trim()||'康美药业有没有造假风险';
+  const st=document.getElementById('status');
+  running=true;
+  ['orchBtn','taskBtn','liveBtn','deepBtn','debateBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=true;});
+  clearAllPanels();
+  st.style.color='';st.innerHTML='<span class="spin"></span> 总控 Agent 编排中：分级升级、统筹能力…';
+  let data;
+  try{
+    const r=await apiGet('orchestrate', q);
+    data=r.data;
+    if(data.error){throw new Error(data.error);}
+  }catch(e){
+    st.innerHTML='';st.style.color='#ff6b6b';
+    st.textContent=((e.message||'').includes('Failed to fetch')||e.name==='AbortError')?'✗ 连不上后端；该任务不在内置快照内。可试：康美药业有没有造假风险 / 600519和000651哪个更干净':'✗ '+e.message;
+    running=false;['orchBtn','taskBtn','liveBtn','deepBtn','debateBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+    return;
+  }
+  st.textContent='✓ 总控编排完成';
+  running=false;['orchBtn','taskBtn','liveBtn','deepBtn','debateBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+  document.getElementById('result').style.display='block';
+  if(data.targets&&data.targets[0]&&data.targets[0].profile)fillProfile(data.targets[0].profile,data.targets[0].code);
+  showOrchestrate(data);
+  document.getElementById('orchPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showOrchestrate(data){
+  const panel=document.getElementById('orchPanel');panel.style.display='block';
+  if(data.message){document.getElementById('orchSummary').innerHTML=`<div style="color:var(--warn)">${data.message}</div>`;document.getElementById('orchTargets').innerHTML='';return;}
+  const lvlC={"极高":"#ff6b6b","高":"#ff9f43","中":"#ffcf5c","低":"#4a9eff","无":"#4ee39a","—":"#6c7fb0"};
+  const reachC={"止步粗筛":"#4ee39a","深度研判":"#4a9eff","控辩互搏":"#ff6b6b","不适用":"#6c7fb0"};
+  // 编排概览
+  const ov=(data.summary&&data.summary.orchestration)||[];
+  let s=`<div style="font-size:13px;color:var(--sub);margin-bottom:8px">🗣️ Agent 理解的任务：<b style="color:#fff">${data.restated||''}</b></div>`;
+  s+='<div style="display:flex;gap:10px;flex-wrap:wrap">'+ov.map(o=>
+    `<div style="flex:1;min-width:200px;background:var(--card);border-radius:10px;padding:10px 14px;border-left:3px solid ${lvlC[o.level]||'#6c7fb0'}">
+      <div style="font-size:14px;font-weight:700;color:#fff">${o.name}</div>
+      <div style="font-size:12px;margin-top:4px"><span style="color:${reachC[o.reached]||'#9fb2df'}">升级至 ${o.reached}</span> · 风险 <b style="color:${lvlC[o.level]||'#fff'}">${o.level}</b></div>
+    </div>`).join('')+'</div>';
+  if(data.compare)s+=`<div style="font-size:13px;color:#4ee39a;margin-top:10px;padding:8px 12px;background:rgba(78,227,154,.08);border-radius:8px">⚖️ ${data.compare}</div>`;
+  document.getElementById('orchSummary').innerHTML=s;
+  // 每标的决策轨迹
+  document.getElementById('orchTargets').innerHTML=(data.targets||[]).map(t=>{
+    if(t.error)return `<div class="card2" style="margin-bottom:14px"><h3>${t.name||t.code}</h3><div style="color:var(--warn)">${t.error}</div></div>`;
+    const trail=(t.trail||[]).map(x=>{
+      const up=x.decision.includes('升级');const stop=x.decision.includes('止步');
+      const c=up?'#ff9f43':stop?'#4ee39a':'#4a9eff';
+      return `<div style="border-left:2px solid ${c};padding:6px 0 6px 12px;margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:#fff">${x.stage} · <span style="color:${c}">${x.decision}</span></div>
+        <div style="font-size:11px;color:var(--sub);margin-top:2px;line-height:1.5">${x.reason}</div>
+      </div>`;}).join('');
+    const pf=t.penalty_flag?'<span style="font-size:11px;color:#ffcf5c;margin-left:8px">⚖️ 已标记追责</span>':'';
+    return `<div class="card2" style="margin-bottom:14px;border-color:#00e0c6">
+      <h3 style="color:#00e0c6">${t.name} · 最终研判「${t.final_level}」${pf}</h3>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:10px">决策轨迹（Agent 为什么这样编排——同代码不同输入走不同路径）</div>
+      ${trail}
+    </div>`;}).join('');
+}
+
+async function runDeepdive(){
+  if(running) return;
+  const code=document.getElementById('codeInput').value.trim();
+  const st=document.getElementById('status');
+  if(!/^\d{6}$/.test(code)){st.textContent='⚠ 请输入6位A股代码';st.style.color='#ffcf5c';return;}
+  running=true;
+  document.getElementById('deepBtn').disabled=true;
+  document.getElementById('liveBtn').disabled=true;
+  document.getElementById('runBtn').disabled=true;
+  clearAllPanels();
+  st.style.color='';st.innerHTML='<span class="spin"></span> Agent 读材料+推理中（约10-30秒）…';
+  let data;
+  try{
+    const r=await apiGet('deepdive', code);
+    data=r.data;
+    if(data.error){throw new Error(data.error);}
+  }catch(e){
+    st.innerHTML='';st.style.color='#ff6b6b';
+    st.textContent = ((e.message||'').includes('Failed to fetch')||e.name==='AbortError')
+      ? '✗ 连不上后端；该股不在内置快照内。可查康美600518/茅台600519/格力000651' : '✗ '+e.message;
+    running=false;
+    ['deepBtn','liveBtn','runBtn'].forEach(id=>document.getElementById(id).disabled=false);
+    return;
+  }
+  if(data.not_applicable){
+    st.innerHTML='';st.style.color='#ffcf5c';st.textContent='⚪ 该标的为金融机构/退市，深度研判不适用';
+    running=false;['deepBtn','liveBtn','runBtn'].forEach(id=>document.getElementById(id).disabled=false);
+    return;
+  }
+  document.getElementById('result').style.display='block';
+  fillProfile(data.profile,code);
+  // 用深度研判真实产出的信息驱动流水线（非假动画）：
+  //   A1信号 → A2图谱 → A3资料理解 → A4研判综述 → A5可操作沉淀
+  const used=new Set((data.plan||[]).filter(p=>p.use).map(p=>p.cap));
+  const nRf=(data.redflags||[]).length, nDis=data.disclosures_total||0;
+  const g=data.gnn;
+  const stageTxt=[
+    (data.rows||[]).some(r=>r.score>0)?'确定性信号命中':'信号未见异常',
+    g?`GNN概率${g.prob.toFixed(2)} 排名${g.rank}/${g.total}`:'不在图谱快照',
+    used.has('materials')?`读${nDis}条公告，提炼${nRf}条红旗`:'跳过资料理解',
+    data.llm_used?'LLM 融合三源研判':'规则综述（LLM降级）',
+    '生成可操作核查清单',
+  ];
+  st.innerHTML='<span class="spin"></span> 多 Agent 协同回放…';
+  animateStages(stageTxt, 550, function(){
+    st.textContent='✓ 深度研判完成';
+    running=false;['deepBtn','liveBtn','runBtn'].forEach(id=>document.getElementById(id).disabled=false);
+    showDeepdive(data);
+    document.getElementById('deepPanel').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+
+// ===== 多 Agent 控辩互搏 =====
+async function runDebate(){
+  if(running) return;
+  const code=document.getElementById('codeInput').value.trim();
+  const st=document.getElementById('status');
+  if(!/^\d{6}$/.test(code)){st.textContent='⚠ 请输入6位A股代码';st.style.color='#ffcf5c';return;}
+  running=true;
+  ['debateBtn','deepBtn','liveBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=true;});
+  clearAllPanels();
+  st.style.color='';st.innerHTML='<span class="spin"></span> 控辩裁三方 Agent 对抗中（已缓存秒出；首次跑该股含真实 LLM 约2-3分钟，请勿关闭）…';
+  let data;
+  try{
+    const r=await apiGet('debate', code);
+    data=r.data;
+    if(data.error){throw new Error(data.error);}
+  }catch(e){
+    st.innerHTML='';st.style.color='#ff6b6b';
+    st.textContent = e.name==='AbortError'
+      ? '✗ 该股首次控辩耗时超5分钟已超时。后端仍在算，稍等1分钟后重点一次即可命中缓存秒出；或先看已缓存的康美600518/茅台600519/美的000333'
+      : (e.message||'').includes('Failed to fetch')
+        ? '✗ 连不上后端。请确认已双击「▶︎ 双击启动Demo.command」且黑窗口未关闭'
+        : '✗ '+e.message;
+    running=false;['debateBtn','deepBtn','liveBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+    return;
+  }
+  if(data.not_applicable){
+    st.innerHTML='';st.style.color='#ffcf5c';st.textContent='⚪ 该标的为金融机构/退市，控辩互搏不适用';
+    running=false;['debateBtn','deepBtn','liveBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+    return;
+  }
+  document.getElementById('result').style.display='block';
+  fillProfile(data.profile,code);
+  renderMatrix(data.matrix);
+  // 用真实控辩轮次驱动流水线
+  const nc=(data.charges||[]).length, nr=(data.rebuttals||[]).length;
+  const su=(data.rulings||[]).filter(r=>r.verdict==='sustained').length;
+  const stageTxt=[
+    (data.rows||[]).some(r=>r.score>0)?'固化硬证据(不可辩)':'证据面清白',
+    `控方提出${nc}条指控`,
+    `辩方回应${nr}条辩护`,
+    `裁判裁定${su}条成立`,
+    `收敛为「${data.final_level||'无'}」风险`,
+  ];
+  st.innerHTML='<span class="spin"></span> 控辩裁三方对抗回放…';
+  animateStages(stageTxt, 600, function(){
+    st.textContent='✓ 控辩互搏完成';
+    running=false;['debateBtn','deepBtn','liveBtn','runBtn'].forEach(id=>{const b=document.getElementById(id);if(b)b.disabled=false;});
+    showDebate(data);
+    document.getElementById('debatePanel').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+}
+
+function showDebate(data){
+  const panel=document.getElementById('debatePanel');
+  panel.style.display='block';
+  const sevC={"高":"#ff6b6b","中":"#ff9f43","低":"#ffcf5c"};
+  const strC={"有力":"#4ee39a","部分":"#ffcf5c","难以辩解":"#ff6b6b"};
+  const verC={"sustained":"#ff6b6b","mitigated":"#4ee39a","uncertain":"#ffcf5c"};
+  const verT={"sustained":"✓ 指控成立","mitigated":"↓ 被合理解释削弱","uncertain":"? 存疑待核实"};
+  // 轮次卡片
+  document.getElementById('debateRounds').innerHTML=(data.rounds||[]).map((r,i)=>
+    `<div style="flex:1;min-width:180px;background:var(--card);border-radius:10px;padding:10px 14px;border-top:3px solid ${['#ff6b6b','#4a9eff','#4ee39a'][i]||'#7c5cff'}">
+      <div style="font-size:12px;font-weight:700;color:#fff">第${i+1}轮 · ${r.role}</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px;line-height:1.5">${r.action}</div>
+      <div style="font-size:11px;color:#4a9eff;margin-top:4px">${r.result}</div>
+    </div>`).join('');
+  // 控方
+  const ch=data.charges||[];
+  document.getElementById('prosBox').innerHTML = ch.length ? ch.map(c=>{
+    const col=sevC[c.severity]||'#ff9f43';
+    return `<div style="background:var(--card);border-radius:8px;padding:9px 12px;margin-bottom:8px;border-left:3px solid ${col}">
+      <div style="display:flex;justify-content:space-between;gap:6px"><span style="font-size:13px;color:var(--ink);font-weight:600;line-height:1.4">${c.point}</span>
+      <span style="font-size:10px;color:${col};font-weight:700;white-space:nowrap">${c.severity||''}</span></div>
+      <div style="font-size:11px;color:var(--dim);margin-top:4px;line-height:1.5">依据：${c.evidence||''}</div>
+    </div>`;}).join('') : '<div style="color:var(--green);text-align:center;padding:24px">控方未能形成有效指控（证据面清白）</div>';
+  // 辩方
+  const rb=data.rebuttals||[];
+  document.getElementById('defBox').innerHTML = rb.length ? rb.map(d=>{
+    const col=strC[d.strength]||'#4a9eff';
+    return `<div style="background:var(--card);border-radius:8px;padding:9px 12px;margin-bottom:8px;border-left:3px solid ${col}">
+      <div style="display:flex;justify-content:space-between;gap:6px"><span style="font-size:12px;color:var(--sub);line-height:1.4">针对：${d.target||''}</span>
+      <span style="font-size:10px;color:${col};font-weight:700;white-space:nowrap">${d.strength||''}</span></div>
+      <div style="font-size:12px;color:var(--ink);margin-top:4px;line-height:1.5">${d.defense||''}</div>
+    </div>`;}).join('') : '<div style="color:var(--dim);text-align:center;padding:24px">无需辩护</div>';
+  // 裁判
+  const ru=data.rulings||[];
+  document.getElementById('judgeBox').innerHTML = ru.length ? ru.map(j=>{
+    const col=verC[j.verdict]||'#7c5cff';
+    return `<div style="background:var(--card);border-radius:8px;padding:9px 12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:6px;align-items:baseline">
+        <span style="font-size:12px;color:var(--ink);font-weight:600;line-height:1.4">${j.charge||''}</span>
+        <span style="font-size:11px;color:${col};font-weight:700;white-space:nowrap">${verT[j.verdict]||j.verdict}</span></div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px;line-height:1.6">${j.reason||''}</div>
+    </div>`;}).join('') : '<div style="color:var(--dim);text-align:center;padding:24px">无指控需裁定</div>';
+  // 最终裁定
+  const lvlC={"极高":"#ff6b6b","高":"#ff9f43","中":"#ffcf5c","低":"#4a9eff","无":"#4ee39a"};
+  const mode=data.mode==='debate'?'🧠 三方 LLM 对抗':'📐 规则降级裁定';
+  document.getElementById('debateVerdict').innerHTML=
+    `<h3 style="color:${lvlC[data.final_level]||'#ff9f43'}">⚖️ 对抗后最终裁定：${data.final_level||'无'}风险 <span style="font-size:11px;color:var(--dim);font-weight:400">（${mode}）</span></h3>
+     <p style="line-height:1.8">${data.opinion||''}</p>`;
+}
+
+function showDeepdive(data, ctx){
+  ctx=ctx||{};
+  renderMatrix(data.matrix);  // 深度研判的矩阵含定性红旗维度(F9)，最完整
+  document.getElementById('deepPanel').style.display='block';
+  // 意图复述横幅（§8.2.2）——仅任务模式显示
+  const ib=document.getElementById('intentBanner');
+  if(ctx.restated){
+    ib.style.display='block';
+    let cmp=ctx.compare?`<div style="font-size:13px;color:#4ee39a;margin-top:6px">⚖️ 对比结论：${ctx.compare}</div>`:'';
+    ib.innerHTML=`<div style="font-size:12px;color:#a78bfa;font-weight:700">🗣️ Agent 理解的任务（意图理解 §8.2.2 · 来源:${ctx.source==='llm'?'LLM解析':'规则兜底'}）</div>
+      <div style="font-size:14px;color:#fff;margin-top:4px">${ctx.restated}</div>${cmp}`;
+  }else{ib.style.display='none';}
+  // Planner 自主规划 —— 每项可展开看 §8.5 工具调用规格
+  const plan=data.plan||[];
+  document.getElementById('planBox').innerHTML=plan.length?('<div style="display:flex;flex-wrap:wrap;gap:8px">'+plan.map(p=>{
+    const on=p.use, c=on?'#4ee39a':'#6c7fb0';
+    const s=p.spec;
+    const spec=s?`<details style="margin-top:6px"><summary style="font-size:11px;color:#4a9eff;cursor:pointer;list-style:none">▸ 工具调用规格 §8.5</summary>
+      <div style="font-size:11px;color:var(--dim);line-height:1.7;margin-top:4px">
+        类型：${s.type}<br>调用：${s.invoke}<br>权限：${s.scope}<br>返回：${s.returns}<br>失败：${s.onfail}</div></details>`:'';
+    return `<div style="flex:1 1 45%;min-width:240px;background:var(--card);border-radius:8px;padding:8px 12px;border-left:3px solid ${c}">
+      <div style="font-size:13px;font-weight:700;color:${on?'#fff':'var(--dim)'}">${on?'✓ 调用':'✗ 跳过'} · ${p.cap}</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:2px;line-height:1.5">${p.reason}</div>${on?spec:''}
+    </div>`;}).join('')+'</div>'):'';
+  // 执行轨迹
+  document.getElementById('traceBox').innerHTML=(data.trace||[]).map(t=>
+    `<div style="border-left:2px solid #7c5cff;padding:6px 0 6px 12px;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:#fff">${t.step} · ${t.title}</div>
+      <div style="font-size:12px;color:var(--sub);margin-top:3px;line-height:1.6">${t.detail}</div>
+    </div>`).join('');
+  // 定性红旗
+  const rf=data.redflags||[];
+  const catColor={"监管立案":"#ff6b6b","监管处罚":"#ff6b6b","非标审计意见":"#ff6b6b","财报更正":"#ff9f43","财务重述":"#ff9f43","更换审计机构":"#ff9f43","股东冻结/占用":"#ff9f43","资金占用":"#ff9f43","交易所问询":"#ffcf5c","诉讼风险":"#ffcf5c","重大诉讼":"#ffcf5c"};
+  document.getElementById('rfMeta').textContent=`共取到 ${data.disclosures_total||0} 条公开公告，Agent 确认 ${rf.length} 条定性红旗（每条可点开原始公告溯源）`;
+  document.getElementById('redflagBox').innerHTML = rf.length ? rf.map(f=>{
+    const c=catColor[f.category]||'#7c5cff';
+    const link=f.url?`<a href="${f.url}" target="_blank" style="color:#4a9eff;text-decoration:none">🔗溯源</a>`:'';
+    return `<div style="background:var(--card);border-radius:8px;padding:9px 12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <span style="font-size:11px;font-weight:700;color:${c}">${f.category||'风险'}</span>
+        <span style="font-size:11px;color:var(--dim)">${f.date||''} ${link}</span>
+      </div>
+      <div style="font-size:13px;color:var(--ink);margin:3px 0;line-height:1.5">${f.title}</div>
+      ${f.why?`<div style="font-size:11px;color:var(--sub);line-height:1.5">💡 ${f.why}</div>`:''}
+    </div>`;}).join('') : '<div style="color:var(--dim);text-align:center;padding:30px">未发现显著定性红旗</div>';
+  // 研判综述
+  const engine=data.llm_used?'🧠 LLM 研判综述（Claude）':'📐 规则综述（LLM 未启用，降级）';
+  document.getElementById('deepVerdict').innerHTML=
+    `<h3 style="color:#a78bfa">🧠 深度研判综述</h3><p style="line-height:1.8">${data.verdict||''}</p>`;
+  document.getElementById('deepEngine').textContent=
+    `研判引擎：${engine} · 定量信号+GNN结构+公告定性红旗三源融合 · 所有定性发现均可溯源到公开公告，不编造`;
+  // 可操作清单（§8.3）+ 有效性自证（§8.2.6）
+  const ab=document.getElementById('actionBox');
+  const acts=data.actions||[], ef=data.effectiveness||{};
+  if(acts.length||ef.backtest){
+    ab.style.display='block';
+    const lis=acts.map(a=>`<li style="font-size:13px;color:var(--ink);line-height:1.7">${a}</li>`).join('');
+    const efb=ef.backtest?`<div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)">
+      <div style="font-size:12px;font-weight:700;color:#4ee39a">✅ 有效性自证（§8.2.6 验证与反馈）</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.7;margin-top:4px">
+        · 回测背书：${ef.backtest}<br>· 可复现：${ef.reproducible}<br>· 不误报：${ef.no_false_alarm}</div></div>`:'';
+    ab.innerHTML=`<h3 style="color:#4ee39a">✅ 可操作核查清单（§8.3 输出可操作）</h3>
+      <ul style="margin:6px 0 0 18px;list-style:disc">${lis}</ul>${efb}`;
+  }else{ab.style.display='none';}
+}
+
+function fillProfile(p,code){
+  const card=document.getElementById('profileCard');
+  if(!p||!p.name){card.style.display='none';return;}
+  card.style.display='block';
+  document.getElementById('pfName').textContent=p.short||p.name;
+  document.getElementById('pfCode').textContent=code;
+  // 标签：行业/市场/指数
+  let tags='';
+  if(p.industry)tags+=`<span class="badge">${p.industry}</span>`;
+  if(p.market)tags+=`<span class="badge">${p.market}</span>`;
+  if(p.index)tags+=`<span class="badge">${p.index.split(/[,，、]/)[0]}</span>`;
+  document.getElementById('pfTags').innerHTML=tags;
+  // 一句话介绍
+  const intro=p.main||p.biz_main||'';
+  document.getElementById('pfIntro').innerHTML='<b style="color:#fff">主营业务：</b>'+(intro||'—')
+    +(p.products?`<br><b style="color:#fff">主要产品：</b>${p.products}`:'');
+  // 关键字段网格
+  const cells=[
+    ['公司全称',p.name],['法人代表',p.legal],
+    ['注册资金',p.capital?(parseFloat(p.capital)>=1?Math.round(parseFloat(p.capital))+'万元':p.capital):''],
+    ['成立日期',p.found],['上市日期',p.listed],['所属行业',p.industry],
+    ['办公地址',p.addr],['官网',p.site],
+  ].filter(c=>c[1]);
+  document.getElementById('pfGrid').innerHTML=cells.map(c=>
+    `<div class="card" style="padding:8px 12px"><div style="font-size:11px;color:var(--dim)">${c[0]}</div><div style="font-size:13px;color:var(--ink);margin-top:2px;word-break:break-all">${c[1]}</div></div>`).join('');
+  document.getElementById('pfScope').innerHTML=p.scope?`<b>经营范围：</b>${p.scope}`:'';
+}
+
+// 风险维度矩阵渲染（对标成熟尽调技能的16维矩阵交付形态）
+function renderMatrix(matrix){
+  const card=document.getElementById('matrixCard');
+  if(!matrix||!matrix.dims||!matrix.dims.length){if(card)card.style.display='none';return;}
+  const colMap={"极高":"#ff6b6b","高":"#ff9f43","中":"#ffcf5c","低":"#4a9eff","无":"#4ee39a","—":"#6c7fb0"};
+  const s=matrix.summary||{};
+  document.getElementById('matrixSummary').innerHTML=
+    `${s.total_dims} 维核查 · <b style="color:#ff9f43">${s.triggered} 维触发</b>`
+    +(s.na?` · ${s.na} 维数据不足`:'')
+    +(s.top_dim?` · 最高：<b style="color:${colMap[s.top_level]||'#fff'}">${s.top_level}（${s.top_dim}）</b>`:'');
+  document.getElementById('matrixGrid').innerHTML=matrix.dims.map(d=>{
+    const col=colMap[d.level]||'#6c7fb0';
+    const dim=d.status==='na'?0.5:1;
+    const scoreTag=d.score!=null?`<span style="font-size:10px;color:var(--dim)"> ${d.score}分</span>`:'';
+    return `<div style="border:1px solid var(--line);border-left:3px solid ${col};border-radius:8px;padding:10px 12px;opacity:${dim}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:700;color:#fff">${d.code} ${d.name}</span>
+        <span style="font-size:11px;font-weight:700;color:${col};white-space:nowrap">${d.level}${scoreTag}</span>
+      </div>
+      <div style="font-size:10px;color:#7c5cff;margin-bottom:5px">${d.group}${d.year?' · '+d.year+'年':''}</div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.6">${(d.basis||[]).slice(0,2).join('；')}</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:6px">来源：${d.source}</div>
+    </div>`;
+  }).join('');
+  card.style.display='';
+}
+
+function showLive(data,code){
+  const clsMap={"极高":"red","高":"warn","中":"warn","低":"green","无":"green","不适用":"green"};
+  const badgeMap={"极高":"🔴极高","高":"🟠高","中":"🟡中","低":"🔵低","无":"⚪无","不适用":"⚪不适用"};
+  // 隐藏可能残留的上一次深度研判面板（它可能属于另一家公司，避免红旗等信息串档）
+  document.getElementById('deepPanel').style.display='none';
+  fillProfile(data.profile,code);
+  // 不适用（金融机构/退市）
+  if(data.not_applicable){
+    document.getElementById('sigTable').innerHTML='<tr><td style="color:var(--warn)">本信号体系不适用</td></tr>';
+    document.getElementById('sigHits').innerHTML='<li style="color:var(--dim)">'+data.note+'</li>';
+    document.getElementById('gnnBox').innerHTML='<div style="color:var(--dim);text-align:center;padding:40px">—</div>';
+    document.getElementById('lawBox').innerHTML='<span style="color:var(--dim)">无已认定违规，不进入追责测算</span>';
+    document.getElementById('srcBox').innerHTML='<b>数据源</b>：AkShare 实时公开数据 <span class="pill live">真实</span>';
+    document.getElementById('verdict').innerHTML='<h3 style="color:var(--warn)">⚪ '+code+'：本信号体系不适用</h3><p>'+data.note+'</p>';
+    document.getElementById('matrixCard').style.display='none';
+    reveal();return;
+  }
+  renderMatrix(data.matrix);
+  // 信号表
+  let t='<tr><th>年份</th><th>综合档</th><th>得分</th><th>货币资金</th><th>占总资产</th><th>占净资产</th></tr>';
+  data.rows.forEach(r=>{const c=clsMap[r.level]||'green';
+    t+=`<tr><td>${r.year}</td><td class="${c}">${badgeMap[r.level]}</td><td>${r.score}</td><td>${r.monetary_funds_yi}亿</td><td>${r.m2a!=null?(r.m2a*100).toFixed(1)+'%':'-'}</td><td>${r.m2e!=null?(r.m2e*100).toFixed(1)+'%':'-'}</td></tr>`;});
+  document.getElementById('sigTable').innerHTML=t;
+  // 命中判据（取得分最高年）
+  const top=data.rows.reduce((a,b)=>b.score>a.score?b:a,data.rows[0]);
+  document.getElementById('sigHits').innerHTML = top.hits.length
+    ? top.hits.map(h=>`<li>${top.year}：${h}</li>`).join('')
+    : '<li style="color:var(--green)">各年财务指标均在正常区间，未触发风险信号（信号不误报）</li>';
+  // GNN 关系图谱风险分（真实：FiGraph 2019 GraphSAGE 输出）
+  const g=data.gnn;
+  if(g){
+    const isHigh=g.prob>=0.5;
+    const col=isHigh?'#ff6b6b':g.prob>=0.2?'#ffcf5c':'#4ee39a';
+    const etypes=Object.entries(g.edge_types||{}).map(([k,v])=>`${k}:${v}`).join(' · ')||'—';
+    document.getElementById('gnnBox').innerHTML=
+      `<div style="text-align:center;padding:6px 0 12px">
+        <div style="font-size:40px;font-weight:700;color:${col}">${g.prob.toFixed(3)}</div>
+        <div style="font-size:12px;color:var(--dim)">GNN 舞弊概率（GraphSAGE · FiGraph 2019）</div>
+      </div>
+      <table>
+        <tr><th>风险排名</th><th>关系数</th><th>舞弊邻居</th></tr>
+        <tr><td class="${isHigh?'red':'green'}">${g.rank}/${g.total}（前${g.pct}%）</td><td>${g.degree}</td><td>${g.fraud_neighbors.length}家</td></tr>
+      </table>
+      <div style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.6">
+        关系类型：${etypes}<br>
+        参照：舞弊公司均分 ${g.fraud_avg} · 正常公司均分 ${g.normal_avg}
+      </div>`;
+  }else{
+    document.getElementById('gnnBox').innerHTML='<div style="color:var(--sub);font-size:13px;line-height:1.7;padding:20px 10px;text-align:center">'
+      +'该公司不在 FiGraph 2019 关系图谱快照中<br><span style="font-size:11px;color:var(--dim)">（GNN 覆盖 3815 家A股；复赛可扩展至全市场实时图谱）</span></div>';
+  }
+  // 追责
+  const hasRisk=data.overall==="极高"||data.overall==="高";
+  document.getElementById('lawBox').innerHTML = hasRisk
+    ? '<b>检出高风险信号</b>，若经监管认定为信息披露违法，可依《证券法》197条测算行政处罚区间、《刑法》161条评估刑事门槛。<br><br><span style="color:var(--warn)">注：本系统仅作风险提示，是否违规以监管/司法认定为准，不主动定性。</span>'
+    : '<span style="color:var(--sub)">当前未检出需追责的高风险信号，不进入处置追责流程。这体现信号的区分度——不误伤正常公司。</span>';
+  document.getElementById('srcBox').innerHTML='<b>财务数据</b>：AkShare / 东方财富，实时拉取<span class="pill live">真实</span><br>'
+    +'<b>计算引擎</b>：signals 信号库确定性规则，无大模型参与<span class="pill live">可复现</span><br>'
+    +'<b>报告期</b>：'+data.rows.map(r=>r.year).join('、')+'<br>'
+    +'<span style="font-size:11px;color:var(--dim)">'+data.note+'</span>';
+  const gnnHigh = g && g.prob>=0.5;
+  const bothHigh = hasRisk && gnnHigh;
+  const eitherHigh = hasRisk || gnnHigh;
+  const vc=eitherHigh?'var(--red)':'var(--green)';
+  let cross='';
+  if(g){
+    if(bothHigh) cross='<br><br><b class="warn">⚠ 双引擎共振</b>：财务信号与 GNN 关系结构<b>同时告警</b>——舞弊嫌疑高度可信。';
+    else if(!hasRisk && gnnHigh) cross='<br><br><b class="warn">⚠ 交叉发现</b>：财务比率看似正常，但 GNN 从<b>关系结构</b>识别出高风险——这正是图分析的价值：财务报表做得平，关系网络藏不住。';
+    else if(hasRisk && !gnnHigh) cross='<br><br>财务信号告警、GNN 关系结构未见异常，建议聚焦财务科目做人工核查。';
+    else cross='<br><br>财务信号与 GNN 关系结构<b>双双正常</b>，风险较低。';
+  }
+  document.getElementById('verdict').innerHTML='<h3 style="color:'+vc+'">'+badgeMap[data.overall]
+    +' '+code+' 综合研判：财务信号'+data.overall+(g?'风险 · GNN概率'+g.prob.toFixed(2):'风险')+'</h3><p>'
+    +'基于 AkShare 实时年报数据（信号库）+ FiGraph 关系图谱（GNN）双引擎当场计算。'
+    +cross
+    +'<br><br><b>换任意股票代码都会重新计算</b>——非预设答案，真实数据驱动。</p>';
+  reveal();
+}
+function reveal(){
+  const r=document.getElementById('result');r.style.display='block';
+  r.classList.remove('fade');void r.offsetWidth;r.classList.add('fade');
+  r.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showResult(d){
+  fillProfile(d.profile, "600518");
+  // 信号表
+  let t='<tr><th>年份</th><th>货币资金</th><th>收入质量</th><th>利润质量</th><th>综合</th></tr>';
+  d.signals.forEach(s=>{t+=`<tr><td>${s.y}</td><td class="${s.cls}">${s.m}</td><td>${s.r}</td><td>${s.p}</td><td class="${s.cls}">${s.agg}</td></tr>`;});
+  document.getElementById('sigTable').innerHTML=t;
+  document.getElementById('sigHits').innerHTML=d.hits.map(h=>`<li>${h}</li>`).join('');
+  document.getElementById('gnnBox').innerHTML=gnnSVG(d.gnn);
+  document.getElementById('lawBox').innerHTML=d.law;
+  document.getElementById('srcBox').innerHTML=d.src;
+  document.getElementById('verdict').innerHTML=`<h3>${d.verdict.t}</h3><p>${d.verdict.p}</p>`;
+  const r=document.getElementById('result');
+  r.style.display='block';r.classList.remove('fade');void r.offsetWidth;r.classList.add('fade');
+  r.scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>

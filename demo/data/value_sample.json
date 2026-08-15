@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "purpose": "价值发现引擎（链热单体冷错配扫描）的可复现样例",
+    "honesty_note": "⚠️ 本文件为【结构示意】数据，用于演示引擎逻辑与端到端流程可跑通。其中估值分位/涨幅/覆盖度/关系占比为示意值，非精确实盘数据；接入 akshare 行情+巨潮披露后由 backend 用真实数据替换。判据逻辑本身完全确定性、可复现。",
+    "验算题说明": "亨通光电(600487)作为'验算题'放入：它是作者真实赚过钱的标的，但主业为光纤光缆+海缆(海风)，与光模块(AI算力驱动)不在同一条链。用于检验归属核验 Agent 能否把它识别为'仅题材联想'而非'真实产业关联'——这正是把'运气'和'能力'分开的试金石。"
+  },
+  "chain": {
+    "name": "光通信（AI算力驱动·光模块）",
+    "leader_ret_1y": 1.20,
+    "leader_pe_pct": 0.85,
+    "leaders": ["中际旭创(300308)", "新易盛(300502)", "天孚通信(300394)"]
+  },
+  "members": [
+    {
+      "code": "300308", "name": "中际旭创",
+      "role": "龙头（锚，不作候选）",
+      "pe_pct_in_chain": 0.80, "ret_1y": 1.30, "turnover": 0.06,
+      "analyst_coverage": 45, "rev_growth": 0.55, "profit_growth": 0.80,
+      "relations": {"own_main_biz": "800G/1.6T 高速光模块", "leader_demand": "AI数据中心算力", "shared_demand": "自身即龙头"}
+    },
+    {
+      "code": "999001", "name": "示意·光引擎二线厂A",
+      "role": "候选（真实关联型·预期命中）",
+      "pe_pct_in_chain": 0.25, "ret_1y": 0.10, "turnover": 0.015,
+      "analyst_coverage": 5, "rev_growth": 0.40, "profit_growth": 0.35,
+      "relations": {
+        "own_main_biz": "光模块用光芯片/光引擎",
+        "leader_demand": "AI数据中心算力（800G/1.6T光模块）",
+        "shared_demand": "同吃AI光模块放量：光模块厂增产→上游光引擎需求同步放量",
+        "supply_links": [
+          {"leader": "中际旭创", "role": "supplier", "ratio": 0.18, "year": 2024, "source": "示意·龙头年报前五大供应商"},
+          {"leader": "新易盛", "role": "supplier", "ratio": 0.11, "year": 2024, "source": "示意·龙头年报前五大供应商"}
+        ]
+      }
+    },
+    {
+      "code": "600487", "name": "亨通光电",
+      "role": "验算题（题材联想型·预期被识破）",
+      "pe_pct_in_chain": 0.30, "ret_1y": 0.12, "turnover": 0.018,
+      "analyst_coverage": 7, "rev_growth": 0.15, "profit_growth": 0.20,
+      "relations": {
+        "own_main_biz": "光纤光缆 + 海底光缆/海上风电电缆 + 电网电缆",
+        "leader_demand": "AI数据中心算力（800G/1.6T光模块）",
+        "shared_demand": "均属'光通信'板块名词，但需求驱动不同：龙头吃AI算力，亨通主要吃海上风电/电网投资",
+        "supply_links": []
+      }
+    },
+    {
+      "code": "999002", "name": "示意·消费电子代工厂B",
+      "role": "干扰项（冷但基本面萎缩·预期被成长护栏压下）",
+      "pe_pct_in_chain": 0.20, "ret_1y": -0.05, "turnover": 0.012,
+      "analyst_coverage": 4, "rev_growth": -0.10, "profit_growth": -0.30,
+      "relations": {
+        "own_main_biz": "消费电子结构件代工",
+        "leader_demand": "AI数据中心算力",
+        "shared_demand": "无明显产业关联",
+        "supply_links": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "_meta": {
+    "purpose": "价值发现引擎样例·半导体链",
+    "honesty_note": "⚠️ 结构示意数据（估值分位/涨幅/覆盖度/关系占比为示意值，非精确实盘），用于演示引擎逻辑。判据逻辑本身确定性可复现；真值待接 akshare 板块成分+行情+巨潮披露。",
+    "验算题说明": "斯迪克(300806)作为题材联想验算题：主业为功能性胶膜/离型膜，虽含'半导体材料'概念但主要下游是消费电子/显示，与AI算力芯片(HBM/先进制程)需求驱动不同，用于检验归属核验能否识别'蹭半导体概念但非核心受益'。"
+  },
+  "chain": {
+    "name": "半导体（AI算力·先进制程/HBM）",
+    "leader_ret_1y": 0.95,
+    "leader_pe_pct": 0.82,
+    "leaders": ["北方华创(002371)", "中微公司(688012)", "寒武纪(688256)"]
+  },
+  "members": [
+    {
+      "code": "002371", "name": "北方华创",
+      "role": "龙头（锚，不作候选）",
+      "pe_pct_in_chain": 0.78, "ret_1y": 1.05, "turnover": 0.05,
+      "analyst_coverage": 42, "rev_growth": 0.45, "profit_growth": 0.55,
+      "relations": {"own_main_biz": "半导体刻蚀/薄膜沉积设备", "leader_demand": "先进制程扩产", "shared_demand": "自身即龙头"}
+    },
+    {
+      "code": "998001", "name": "示意·先进封装材料厂C",
+      "role": "候选（真实关联型·预期命中）",
+      "pe_pct_in_chain": 0.28, "ret_1y": 0.13, "turnover": 0.016,
+      "analyst_coverage": 6, "rev_growth": 0.38, "profit_growth": 0.30,
+      "relations": {
+        "own_main_biz": "先进封装用高纯靶材/键合材料",
+        "leader_demand": "AI算力芯片先进封装(HBM/2.5D/3D)",
+        "shared_demand": "同吃先进封装放量：设备扩产→上游材料需求同步放量",
+        "supply_links": [
+          {"leader": "中微公司", "role": "supplier", "ratio": 0.15, "year": 2024, "source": "示意·龙头年报前五大供应商"},
+          {"leader": "北方华创", "role": "supplier", "ratio": 0.10, "year": 2024, "source": "示意·龙头年报前五大供应商"}
+        ]
+      }
+    },
+    {
+      "code": "300806", "name": "斯迪克",
+      "role": "验算题（题材联想型·预期被识破）",
+      "pe_pct_in_chain": 0.30, "ret_1y": 0.10, "turnover": 0.02,
+      "analyst_coverage": 7, "rev_growth": 0.12, "profit_growth": 0.08,
+      "relations": {
+        "own_main_biz": "功能性胶膜/离型膜（下游主要为消费电子、显示模组）",
+        "leader_demand": "AI算力芯片先进制程/HBM",
+        "shared_demand": "含'半导体材料'概念，但主要下游是消费电子/显示，与AI算力芯片需求驱动不同",
+        "supply_links": []
+      }
+    },
+    {
+      "code": "998002", "name": "示意·传统分立器件厂D",
+      "role": "干扰项（冷但基本面萎缩·预期被成长护栏压下）",
+      "pe_pct_in_chain": 0.18, "ret_1y": -0.08, "turnover": 0.011,
+      "analyst_coverage": 3, "rev_growth": -0.15, "profit_growth": -0.35,
+      "relations": {
+        "own_main_biz": "传统二极管/三极管分立器件",
+        "leader_demand": "AI算力芯片",
+        "shared_demand": "无明显产业关联，消费级需求疲弱",
+        "supply_links": []
+      }
+    }
+  ]
+}
